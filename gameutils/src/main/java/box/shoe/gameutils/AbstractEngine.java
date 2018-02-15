@@ -5,6 +5,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.os.SystemClock;
 import android.support.annotation.CallSuper;
 import android.support.annotation.IntDef;
 import android.support.annotation.RestrictTo;
@@ -322,17 +323,17 @@ public abstract class AbstractEngine
     {
         /*L.d("=========================", "mem");
         L.d("Size of interp carrier pool before: " + InterpolatablesCarrier.POOL.debug(), "mem");
-        L.d("Number of interpolable entities: " + EntityServices.getServiceMembers(EntityServices.Service.INTERPOLATION).size(), "mem");
+        L.d("Number of interpolable entities: " + Services.getServiceMembers(Services.Service.INTERPOLATION).size(), "mem");
 */
         // Run Interpolation Service. //TODO: call them systems? //TODO: on entities?
-        for (Entity entity : EntityServices.getServiceMembers(EntityServices.Service.INTERPOLATION))
+        for (Interpolatable interpolatable : Interpolatable.SERVICE.getMembers())
         {
             // Generate new InterpolatablesCarrier.
             InterpolatablesCarrier newInterpolatablesCarrier = InterpolatablesCarrier.POOL.get();
-            entity.provideInterpolatables(newInterpolatablesCarrier);
+            interpolatable.provideInterpolatables(newInterpolatablesCarrier);
 
             // Save to gameState for this Entity.
-            gameState.interps.put(entity, newInterpolatablesCarrier);
+            gameState.interps.put(interpolatable, newInterpolatablesCarrier);
         }
 /*
         L.d("Size of interp carrier pool after_: " + InterpolatablesCarrier.POOL.debug(), "mem");*/
@@ -481,20 +482,20 @@ public abstract class AbstractEngine
                                 else
                                 {
                                     InterpolatablesCarrier interp;
-                                    for (Entity entity : EntityServices.getServiceMembers(EntityServices.Service.INTERPOLATION))
+                                    for (Interpolatable interpolatable : Interpolatable.SERVICE.getMembers())
                                     { //todo: we go through every item, even ones the game engine has given up on. but they have not been gc'd yet. this takes extra time... possible to fix this without necessitating that the owner marks the object as unused?
-                                        InterpolatablesCarrier oldInterpolatablesCarrier = oldState.interps.get(entity);
-                                        InterpolatablesCarrier newInterpolatablesCarrier = newState.interps.get(entity);
+                                        InterpolatablesCarrier oldInterpolatablesCarrier = oldState.interps.get(interpolatable);
+                                        InterpolatablesCarrier newInterpolatablesCarrier = newState.interps.get(interpolatable);
 
                                         if (oldInterpolatablesCarrier != null && newInterpolatablesCarrier != null)
                                         {
                                             try
                                             {
                                                 interp = oldInterpolatablesCarrier.interpolateTo(newInterpolatablesCarrier, interpolationRatio);
-                                                entity.recallInterpolatables(interp);
+                                                interpolatable.recallInterpolatables(interp);
                                                 if (!interp.isEmpty())
                                                 { //TODO: can this error happen? aren't non equal length in and out incompatible error'd?
-                                                    throw new IllegalStateException(entity + " not all interpolatables were recalled!");
+                                                    throw new IllegalStateException(interpolatable + " not all interpolatables were recalled!");
                                                 }
                                                 interp.cleanup();
                                                 InterpolatablesCarrier.POOL.put(interp);
@@ -519,7 +520,7 @@ public abstract class AbstractEngine
                         }
                     }
                     else
-                    {
+                    { //TODO: remove this. no longer useful
                         Log.i("Frames", "Skipped painting frame because unprepared");
                     }
                 }

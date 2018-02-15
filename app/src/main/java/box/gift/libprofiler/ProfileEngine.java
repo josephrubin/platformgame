@@ -1,24 +1,14 @@
 package box.gift.libprofiler;
 
-import android.graphics.Color;
-import android.view.MotionEvent;
-
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.concurrent.ThreadLocalRandom;
 
 import box.shoe.gameutils.AbstractEngine;
 import box.shoe.gameutils.Emitter;
-import box.shoe.gameutils.Entity;
-import box.shoe.gameutils.EntityCollisions;
-import box.shoe.gameutils.EntityServices;
 import box.shoe.gameutils.GameEvents;
 import box.shoe.gameutils.GameState;
-import box.shoe.gameutils.Paintable;
 import box.shoe.gameutils.Rand;
 import box.shoe.gameutils.Screen;
-import box.shoe.gameutils.SimpleEmitter;
-import box.shoe.gameutils.TaskScheduler;
 import box.shoe.gameutils.Vector;
 import box.shoe.gameutils.Weaver;
 
@@ -34,13 +24,11 @@ public class ProfileEngine extends AbstractEngine
 
     public static final String PLAYER = "player";
     public static final String PLATFORMS = "platforms";
-    public static final String ENEMIES = "enemies";
     public static final String LAND_EMITTER = "landEmitter";
     public static final String SCORE = "score";
     public static final String ATTACK = "attack";
 
     private Player player;
-    private LinkedList<Enemy> enemies;
     private LinkedList<Platform> platforms;
     private float lastPlatformY;
     //private Attack attack = null;
@@ -58,22 +46,11 @@ public class ProfileEngine extends AbstractEngine
     private int difficulty = 0;
     private final int SECONDS_UNTIL_MAX_DIFFICULTY = 35;
 
-    //private boolean jumpTouch = false;
-
     public ProfileEngine(Screen screen)
     {
         super(TARGET_UPS, screen);
-        enemies = new LinkedList<>();
         platforms = new LinkedList<>();
         random = new Rand();
-
-        landEmitter = new SimpleEmitter.Builder()
-                .color(Color.LTGRAY)
-                .duration(4)
-                .speed(12)
-                .spanDegrees(225, 315)
-                .size(15)
-                .build();
     }
 
     @Override
@@ -99,35 +76,12 @@ public class ProfileEngine extends AbstractEngine
         }
 
         //TODO: player dying should be part of its own update method, but we must first figure out how it knows when it's offscreen.
-        if (player.y > getGameHeight())
+        if (player.body.top > getGameHeight())
         {
             Weaver.tug(GameEvents.GAME_OVER);
         }
 
-        Iterator<Enemy> enemyIterator = enemies.iterator();
-        while (enemyIterator.hasNext())
-        {
-            Enemy enemy = enemyIterator.next();
-            /*if (attack != null && EntityCollisions.entityEntity(attack, enemy))
-            {
-                enemyIterator.remove();
-            }
-            else */if (EntityCollisions.entityEntity(player, enemy))
-            {
-                Weaver.tug(GameEvents.GAME_OVER);
-            }
-
-            // Destroy offscreen enemies.
-            else if (enemy.x + enemy.width < 0)
-            {
-                enemy.cleanup();
-                enemyIterator.remove();
-            }
-
-            enemy.update();
-        }
-
-        float playerOldY = player.y;
+        float playerOldBottom = player.body.bottom;
         boolean grounded = player.grounded;
         player.update();
         player.offGround();
@@ -138,32 +92,32 @@ public class ProfileEngine extends AbstractEngine
         {
             Platform platform = platformIterator.next();
 
-            if (playerOldY + player.height <= platform.y && player.y + player.height > platform.y
-                    && player.x + player.width > platform.x && player.x < platform.x + platform.width)
+            if (playerOldBottom <= platform.body.top && player.body.bottom > platform.body.top
+                    && player.body.right > platform.body.left && player.body.left < platform.body.right)
             {
-                player.y = platform.y - player.height;
+                player.body.offsetTo(player.body.left, platform.body.top - player.body.height());
                 player.velocity = Vector.ZERO;
             }/*
             else if (EntityCollisions.entityEntity(player, platform))
             {
                 Weaver.tug(GameEvents.GAME_OVER);
             }*/
-            if (player.y + player.height == platform.y
-                    && player.x + player.width + 50 > platform.x && player.x < platform.x + platform.width + 50 /*add a bit of tolerance if we have just left the platform*/
+            if (player.body.bottom == platform.body.top
+                    && player.body.right + 50 > platform.body.left && player.body.left < platform.body.right + 50 /*add a bit of tolerance if we have just left the platform*/
                     && player.velocity.getY() >= 0)
-            {
+            {/*
                 if (!grounded)
                 {
                     for (int i = 0; i < 12; i++)
                     {
                         landEmitter.emit(player.x + player.width / 2, player.y + player.height);
                     }
-                }
+                }*/
                 player.onGround();
             }
 
             // Destroy offscreen platforms.
-            if (platform.x + platform.width < 0)
+            if (platform.body.right < 0)
             {
                 platform.cleanup();
                 platformIterator.remove();
@@ -174,7 +128,7 @@ public class ProfileEngine extends AbstractEngine
             // Check if this is the last platform.
             if (!platformIterator.hasNext())
             {
-                if (platform.x + platform.width + platformDistance <= getGameWidth())
+                if (platform.body.right + platformDistance <= getGameWidth())
                 {
                     spawnPlatform = true;
                 }
@@ -203,7 +157,7 @@ public class ProfileEngine extends AbstractEngine
             jumpTouch = false;
         }
 */
-        landEmitter.update();
+        //landEmitter.update();
 
         score += 1;
     }
@@ -273,10 +227,8 @@ public class ProfileEngine extends AbstractEngine
     {
         gameState.put(PLAYER, player);
         gameState.put(PLATFORMS, platforms);
-        gameState.put(ENEMIES, enemies);
-        gameState.put(LAND_EMITTER, landEmitter);
+        //gameState.put(LAND_EMITTER, landEmitter);
         gameState.put(SCORE, score / 2);
-        //gameState.put(ATTACK, attack);
     }
 /*
     @Override

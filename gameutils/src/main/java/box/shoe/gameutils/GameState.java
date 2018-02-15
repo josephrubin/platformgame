@@ -25,7 +25,7 @@ public class GameState
 
     // Storage of all Entities along with their provided Interpolatables.
     // Used to interpolate values for the Entities at this GameState.
-    /*pack*/ WeakHashMap<Entity, InterpolatablesCarrier> interps;
+    /*pack*/ WeakHashMap<Interpolatable, InterpolatablesCarrier> interps;
 
     /*pack*/ GameState()
     {

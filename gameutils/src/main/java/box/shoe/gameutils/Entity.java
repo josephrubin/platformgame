@@ -1,47 +1,25 @@
 package box.shoe.gameutils;
 
+import android.graphics.RectF;
 import android.support.annotation.CallSuper;
 import android.util.Log;
 
-import org.jetbrains.annotations.Contract;
-
-import java.lang.ref.WeakReference;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Set;
-import java.util.WeakHashMap;
-
 /**
  * Created by Joseph on 12/9/2017.
- * A game object which holds a position and space on the screen and can move around.
- * Technically: a Game object with x and y coordinates, which can be fractional, width and height,
- * which can be fractional (or 0 to indicate no space taken up)
- * and Vector objectsfor velocity and acceleration.
- * Width and height are different from display-width and display-height.
+ * A game object which occupies position and space in the game and can move around.
+ * An Entity is not necessarily fit for rendering.
+ * See DisplayEntity for an Entity which is meant to be displayed
+ * during the game (occupies position and space on the screen).
  */ //TODO: type of short-lived entity that exists only for a number of frames? (particle)
-public class Entity //TODO: have methods for getting bounds? (instead of x+wid, use getRight) etc. getCenterX etc.
+public class Entity/* implements Poolable*/
 {
-    // Width represents how much horizontal space this takes up.
-    public float width;
-    // Height represents how much vertical space this takes up.
-    public float height;
+    // The game-space which is occupied by this Entity.
+    public AABB body;
 
-    // Represents where this is on the screen. Positive direction indicates how far right and down this is on the screen.
-    // (In other words, displacement from the (top-left) origin in the x (rightward) and y (downward) directions.)
-    public float x;
-    public float y;
     // Vector which represents how many x and y units the position will change by per update.
     public Vector velocity;
     // Vector which represents how many x and y units the velocity will change by per update.
     public Vector acceleration;
-
-    // Relatively from the position, where to find the point of origin from which all positioning of this object is calculated.
-    public Vector registration; //TODO: make final somehow
-
-    public float _width;
-    public float _height;
-    public float _x;
-    public float _y;
 
     // Enforce cleanup method call.
     private boolean cleaned = false;
@@ -52,7 +30,7 @@ public class Entity //TODO: have methods for getting bounds? (instead of x+wid, 
      * @param initialX the starting x coordinate.
      * @param initialY the starting y coordinate.
      */
-    public Entity(float initialX, float initialY)
+    public Entity(float initialX, float initialY) //TODO: version of these with RectF's? Or at least with params in the form of left/top/right/bot?
     {
         this(initialX, initialY, 0, 0, Vector.ZERO, Vector.ZERO);
     }
@@ -94,30 +72,25 @@ public class Entity //TODO: have methods for getting bounds? (instead of x+wid, 
      */
     public Entity(float initialX, float initialY, float initialWidth, float initialHeight, Vector initialVelocity, Vector initialAcceleration)
     {
-        width = _width = initialWidth;
-        height = _height = initialHeight;
-        x = _x = initialX; //TODO: we are setting the visual fields equal to the normal ones for display before the first couple frames (before it has been interpolated). the other option may be better -- do not paint entities until they can be interpolated ?
-        y = _y = initialY;
+        // Do some sanity checking.... removing these checks could potentially be interesting,
+        // but would probably not lead to behavior that is intended most of the time.
+        if (initialWidth < 0)
+        {
+            throw new IllegalArgumentException("Width cannot be less than 0: " + initialWidth);
+        }
+        if (initialHeight < 0)
+        {
+            throw new IllegalArgumentException("Height cannot be less than 0: " + initialHeight);
+        }
+        body = new AABB(initialX, initialY, initialX + initialWidth, initialY + initialHeight);
         velocity = initialVelocity;
         acceleration = initialAcceleration;
-        registration = new Vector(0, 0);
     }
 
-    public Entity wizard(float initialX, float initialY, float initialWidth, float initialHeight, Vector initialVelocity)
-    {
-        width = _width = initialWidth;
-        height = _height = initialHeight;
-        x = _x = initialX; //TODO: we are setting the visual fields equal to the normal ones for display before the first couple frames (before it has been interpolated). the other option may be better -- do not paint entities until they can be interpolated ?
-        y = _y = initialY;
-        velocity = initialVelocity;
-        acceleration = Vector.ZERO;
-        registration = new Vector(0, 0);
-        return this;
-    }//TODO: do for other constructors.
-
     /**
-     * Updates velocity based on current acceleration, and then updates position based on new velocity.
-     * We do not need to multiply by dt because every timestep is of equal length.
+     * Updates velocity based on current acceleration,
+     * and then updates position based on new velocity.
+     * We do not need to multiply by dt because every time-step is of equal length.
      */
     @CallSuper
     public void update() //TODO: return some data? like boolean which says if this should be destroyed? or have that a Weaver event?
@@ -126,58 +99,58 @@ public class Entity //TODO: have methods for getting bounds? (instead of x+wid, 
         // and update position based on velocity second.
         // This is apparently called Semi-Implicit Euler and is a more accurate form of integration
         // when acceleration is not constant.
-        // More importantly though, we do it because we subscribe to the holy faith
-        // of Gaffer On Games, whose recommendations are infallible.
 
         // Update velocity first based on current acceleration.
         velocity = velocity.add(acceleration);
 
         // Update position based on new velocity.
-        x += velocity.getX();
-        y += velocity.getY();
+        body.offset(velocity.getX(), velocity.getY());
     }
 
-//TODO: interpolation as a service/system should be interface? and not just for entities? (if services work for all objects)
-    @CallSuper
-    protected void provideInterpolatables(InterpolatablesCarrier in)
-    {
-        in.provide(x);
-        in.provide(y);
-        in.provide(width);
-        in.provide(height);
-    }
-
-    @CallSuper
-    protected void recallInterpolatables(InterpolatablesCarrier out)
-    {
-        _x = out.recall();
-        _y = out.recall();
-        _width = out.recall();
-        _height = out.recall();
-    }
-
+    /**
+     * Cleanup should always be called before an Entity is eligible to be Garbage Collected.
+     * After a cleanup call, the Entity is no longer usable, and should be de-referenced immediately.
+     * Any use of an Entity object or its aggregates after cleanup is called is undefined.
+     * This should have no effect if called more than once for any particular Entity.
+     * i.e. calls after the first one should be idempotent.
+     * Turn on debug mode get warnings when cleanup was not called prior to an Entity being GC'd.
+     */
     @CallSuper
     public void cleanup()
     {
         cleaned = true;
-        EntityServices.removeAllServices(this);
     }
 
+    /**
+     * When trying to debug, let the user know when they have de-referenced an Entity that was
+     * not cleaned up. Not cleaning up an Entity can lead to sub-optimal performance
+     * in the time before it is garbage collected, because they will still be in the
+     * lists of services that will operate on them, without any real reason.
+     * The services use weak data structures so the Entities may still be eventually GC'd,
+     * at which point, this finalize may be run to alert the user that cleanup was not called.
+     * Of course, it is up to each Entity subclass to override cleanup() to remove the services
+     * they register for (and also to throw the Entity back in a Pool if it came from one).
+     */
     @Override
     protected void finalize()
     {
         if (!cleaned) //TODO: only in debug mode
         {
-            Log.w("Entity Finalizer", getClass().getName() + "|" + this + " was garbage collected before being cleaned! Try calling cleanup() on Entities that you are done with before dereferenceing them. (REASON: this will remove services, which will increase performance before the Entity is GC'd.)");
+            // We log a warning because throwing an error here will not stop program execution
+            // anyway and there is technically no 'error' here. For all we know, the Entities do not
+            // need to be cleaned up. This warning exists for debug purposes only.
+            Log.w("Entity Finalizer", getClass().getName() + "|" + this + " was garbage collected before being cleaned! Try calling cleanup() on Entities that you are done with before de-referenceing them.");
         }
     }
 
+    // We mark this method as final to enforce all Collections of Entities to be identity collections.
     @Override
     public final boolean equals(Object other)
     {
         return super.equals(other);
     }
 
+    // We mark this method as final to enforce all Collections of Entities to be identity collections.
     @Override
     public final int hashCode()
     {

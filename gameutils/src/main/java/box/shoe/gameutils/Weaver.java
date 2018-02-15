@@ -9,7 +9,7 @@ import java.util.Map;
  * Created by Joseph on 11/30/2017.
  * Global messaging system.
  */
-
+//TODO: are global events even smart??
 public class Weaver //TODO: rename
 {
     private static Map<String, List<Runnable>> hooks = new HashMap<>();

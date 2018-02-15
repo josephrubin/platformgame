@@ -20,7 +20,6 @@ import android.view.View;
 //TODO: when game resumes, should not jump so much from previous frame!
 public abstract class AbstractTextureViewScreen extends TextureView implements TextureView.SurfaceTextureListener, Screen
 {
-    private static final boolean DEBUG_SHOW_BOUNDING_BOXES = false; //TODO: allow to be set from public function
     private volatile boolean surfaceReady = false;
     private boolean preparedToPaint = false;
 
@@ -84,15 +83,6 @@ public abstract class AbstractTextureViewScreen extends TextureView implements T
         surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
         paint(surfaceCanvas, gameState);
-        // Create debug artifacts, which follow the actual in-game positions, and box each Entity.
-        if (AbstractTextureViewScreen.DEBUG_SHOW_BOUNDING_BOXES)
-        {
-            // We will draw all Entities, not just Paintables.
-            for (Entity entity : gameState.interps.keySet())
-            {
-                surfaceCanvas.drawRect((float) entity.x, (float) entity.y, (float) (entity.x + entity.width), (float) (entity.y + entity.height), new Paint(Paint.ANTI_ALIAS_FLAG));
-            }
-        }
 
         postCanvas();
     }

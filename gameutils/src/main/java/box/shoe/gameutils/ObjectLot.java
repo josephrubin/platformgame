@@ -8,9 +8,9 @@ package box.shoe.gameutils;
 public class ObjectLot<T> //TODO: if object is sleeping, the GameState weak refs should clear, or at least dont copy sleeping obects to the next GameState.... (for Entity pool, not ObjectPool)
 { //TODO: auto allocate to fill pools at the start?
     //TODO: pick smart values for size of all library pools. depending on how many are created vs how many are deleted. if in equal/similar number, smaller values are needed.
-    /*pack*/ T[] sleeping;
-    /*pack*/ int currentIndex;
-    /*pack*/ int size;
+    private T[] sleeping;
+    private int currentIndex;
+    public int size;
 
     /**
      * Creates an object pool of the specified size.

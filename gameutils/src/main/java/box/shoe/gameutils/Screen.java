@@ -5,6 +5,7 @@ import android.view.View;
 
 /**
  * Created by Joseph on 1/1/2018.
+ * An object which can display a game to the Android user.
  */
 
 public interface Screen

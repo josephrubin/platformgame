@@ -2,23 +2,21 @@ package box.gift.libprofiler;
 
 import android.content.res.Resources;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 
+import box.shoe.gameutils.DisplayEntity;
 import box.shoe.gameutils.Entity;
-import box.shoe.gameutils.EntityServices;
-import box.shoe.gameutils.GameEvents;
+import box.shoe.gameutils.Interpolatable;
 import box.shoe.gameutils.Paintable;
 import box.shoe.gameutils.Vector;
-import box.shoe.gameutils.Weaver;
 
 /**
  * Created by Joseph on 2/9/2018.
  */
 
-public class Player extends Entity implements Paintable
+public class Player extends DisplayEntity implements Paintable
 {
     private static final Vector VELOCITY_SHORT_JUMP = new Vector(0, -77);
     private static final Vector VELOCITY_JUMP = new Vector(0, -90);
@@ -37,7 +35,7 @@ public class Player extends Entity implements Paintable
         super(initialX, initialY, initialWidth, initialHeight);
         acceleration = ACCELERATION_GRAVITY;
         paintable = new PlayerPaintable();
-        EntityServices.addService(this, EntityServices.Service.INTERPOLATION);
+        Interpolatable.SERVICE.addMember(this);
     }
 /*
     public Attack requestAttack()
@@ -107,6 +105,7 @@ public class Player extends Entity implements Paintable
 
     private class PlayerPaintable implements Paintable
     {
+        private Rect bounds = new Rect();
         private boolean started = false;
         private int ind = 0;
         private AnimationDrawable runAnimation;
@@ -121,9 +120,10 @@ public class Player extends Entity implements Paintable
                 started = true;
             }
 
+            display.round(bounds);
             if (grounded)
             {
-                runAnimation.setBounds((int) _x, (int) _y, (int) (_x + _width), (int) (_y + _height));
+                runAnimation.setBounds(bounds);
                 runAnimation.selectDrawable(ind / 4);
                 ind++;
                 if (ind > 28) ind = 0;
@@ -139,7 +139,7 @@ public class Player extends Entity implements Paintable
                 {
                     still = resources.getDrawable(R.drawable.run7);
                 }
-                still.setBounds((int) _x, (int) _y, (int) (_x + _width), (int) (_y + _height));
+                still.setBounds(bounds);
                 still.draw(canvas);
             }
             //canvas.drawRect(_x, _y, _x + _width, _y + _height, paint);

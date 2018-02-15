@@ -4,11 +4,8 @@ import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 
 /**
@@ -18,12 +15,14 @@ import java.util.Map;
 public class SimpleEmitter implements Emitter, Paintable
 {
     private Paint paint;
-    private HashMap<Entity, Integer> particles;
+    private HashMap<DisplayEntity, Integer> particles;
     private float size;
     private double speed;
     private double startRadians;
     private double endRadians;
     private int duration;
+    private float x;
+    private float y;
 
     private SimpleEmitter(float size, double speed, int color, double startRadians, double endRadians, int duration)
     {
@@ -38,21 +37,12 @@ public class SimpleEmitter implements Emitter, Paintable
         particles = new HashMap<>();
     }
 
-    // Emit so center point is at (xPos, yPos).
-    public void emit(float xPos, float yPos)
-    {
-        Entity particle = new Entity(xPos - size / 2, yPos - size / 2);
-        EntityServices.addService(particle, EntityServices.Service.INTERPOLATION); //TODO: remove particles services on kill
-        particle.velocity = Vector.fromPolarDegrees(speed, Rand.instance.intFrom((int) Math.toDegrees(startRadians), (int) Math.toDegrees(endRadians))); //TODO: we are turning deg into rad then back then forth. find better way (priority=low)
-        particles.put(particle, 0);
-    }
-
     public void update()
     {
-        Iterator<Map.Entry<Entity, Integer>> entryIterator = particles.entrySet().iterator();
+        Iterator<Map.Entry<DisplayEntity, Integer>> entryIterator = particles.entrySet().iterator();
         while (entryIterator.hasNext())
         {
-            Map.Entry<Entity, Integer> entry = entryIterator.next();
+            Map.Entry<DisplayEntity, Integer> entry = entryIterator.next();
             if (entry.getValue() >= duration)
             {
                 entry.getKey().cleanup();
@@ -69,12 +59,31 @@ public class SimpleEmitter implements Emitter, Paintable
     @Override
     public void paint(Canvas canvas, Resources resources)
     {
-        for (Entity particle : particles.keySet())
+        for (DisplayEntity particle : particles.keySet())
         {
-            canvas.drawRect(particle._x, particle._y,
-                    (particle._x + size),
-                    (particle._y + size), paint);
+            canvas.drawRect(particle.display, paint);
         }
+    }
+
+    @Override
+    public void setX(float x)
+    {
+        this.x = x;
+    }
+
+    @Override
+    public void setY(float y)
+    {
+        this.y = y;
+    }
+
+    @Override
+    public void emit()
+    {
+        DisplayEntity particle = new DisplayEntity(x - size / 2, y - size / 2, size, size);
+        Interpolatable.SERVICE.addMember(particle); //TODO: remove particles services on kill
+        particle.velocity = Vector.fromPolarDegrees(speed, Rand.instance.intFrom((int) Math.toDegrees(startRadians), (int) Math.toDegrees(endRadians))); //TODO: we are turning deg into rad then back then forth. find better way (priority=low)
+        particles.put(particle, 0);
     }
 
     public static class Builder

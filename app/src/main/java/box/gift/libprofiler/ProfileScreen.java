@@ -53,12 +53,6 @@ public class ProfileScreen extends AbstractSurfaceViewScreen
             platform.paint(canvas, getResources());
         }
 
-        List<Paintable> enemies = gameState.get(ProfileEngine.ENEMIES);
-        for (Paintable enemy : enemies)
-        {
-            enemy.paint(canvas, getResources());
-        }
-
         Paintable player = gameState.get(ProfileEngine.PLAYER);
         player.paint(canvas, getResources());
 
@@ -68,8 +62,8 @@ public class ProfileScreen extends AbstractSurfaceViewScreen
             attack.paint(canvas, getResources());
         }
 
-        Paintable landEmitter = gameState.get(ProfileEngine.LAND_EMITTER);
-        landEmitter.paint(canvas, getResources());
+        //Paintable landEmitter = gameState.get(ProfileEngine.LAND_EMITTER);
+        //landEmitter.paint(canvas, getResources());
 
         // Score.
         int score = gameState.get(ProfileEngine.SCORE);

@@ -6,8 +6,9 @@ import android.graphics.Canvas;
  * Created by Joseph on 1/15/2018.
  */
 
-public interface Emitter extends Paintable
+public interface Emitter
 {
-    void emit(float xPos, float yPos);
-    void update();
+    void setX(float x);
+    void setY(float y);
+    void emit();
 }

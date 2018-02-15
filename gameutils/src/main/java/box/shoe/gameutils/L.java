@@ -1,8 +1,6 @@
 package box.shoe.gameutils;
 
 import android.util.Log;
-
-import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
