@@ -8,13 +8,12 @@ import android.graphics.RectF;
 
 import box.shoe.gameutils.DisplayEntity;
 import box.shoe.gameutils.Interpolatable;
-import box.shoe.gameutils.Paintable;
 
 /**
  * Created by Joseph on 2/9/2018.
  */
 
-public class Platform extends DisplayEntity implements Paintable
+public class Platform extends DisplayEntity
 {
     private static PlatformPaintable paintable = new PlatformPaintable();
 
@@ -24,7 +23,6 @@ public class Platform extends DisplayEntity implements Paintable
         Interpolatable.SERVICE.addMember(this);
     }
 
-    @Override
     public void paint(Canvas canvas, Resources resources)
     {
         paintable.paint(canvas, display);

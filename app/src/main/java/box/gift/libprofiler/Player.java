@@ -7,22 +7,20 @@ import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 
 import box.shoe.gameutils.DisplayEntity;
-import box.shoe.gameutils.Entity;
 import box.shoe.gameutils.Interpolatable;
-import box.shoe.gameutils.Paintable;
 import box.shoe.gameutils.Vector;
 
 /**
  * Created by Joseph on 2/9/2018.
  */
 
-public class Player extends DisplayEntity implements Paintable
+public class Player extends DisplayEntity
 {
     private static final Vector VELOCITY_SHORT_JUMP = new Vector(0, -77);
     private static final Vector VELOCITY_JUMP = new Vector(0, -90);
     private static final Vector ACCELERATION_GRAVITY = new Vector(0, 10.5);
 
-    private Paintable paintable;
+    private PlayerPaintable paintable;
 
     private boolean doubleJumped = true;
     public boolean grounded = false;
@@ -97,13 +95,12 @@ public class Player extends DisplayEntity implements Paintable
         sinceAttack = Math.min(sinceAttack, attackCooldown);
     }
 
-    @Override
     public void paint(Canvas canvas, Resources resources)
     {
         paintable.paint(canvas, resources);
     }
 
-    private class PlayerPaintable implements Paintable
+    private class PlayerPaintable
     {
         private Rect bounds = new Rect();
         private boolean started = false;
@@ -111,7 +108,6 @@ public class Player extends DisplayEntity implements Paintable
         private AnimationDrawable runAnimation;
         private Drawable still;
 
-        @Override
         public void paint(Canvas canvas, Resources resources)
         {
             if (!started)

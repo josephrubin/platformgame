@@ -1,6 +1,5 @@
 package box.shoe.gameutils;
 
-import android.graphics.RectF;
 import android.support.annotation.CallSuper;
 import android.util.Log;
 

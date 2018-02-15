@@ -33,11 +33,11 @@ import box.gift.gameutils.R;
  * Because these are not aligned, the engine interpolates between two game states for frame painting based on time,
  * and gives the interpolated game state to the Screen supplied to the constructor.
  */
-public abstract class AbstractEngine
+public abstract class AbstractEngine //TODO: redo input system. make it easy, usable.
 { //TODO: remove isActive()/isPlaying() and replace with a single state variable.
     // Define the possible UPS options, which are factors of 1000 (so we get an even number of MS per update).
     // This is not a hard requirement, and the annotation may be suppressed,
-    // at the risk of possible jittery frame display.
+    // at the risk of possible jittery frame display. //TODO: is this actually a real concern?
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({1, 2, 4, 5, 8, 10, 20, 25, 40, 50, 100, 125, 200, 250, 500, 1000})
     public @interface UPS_Options {}
@@ -65,15 +65,18 @@ public abstract class AbstractEngine
     private volatile boolean paused = false;
     private volatile boolean pauseThreads = false;
 
-    // Threads
+    // Threads.
+    // Runs game updates.
     private Thread updateThread;
     private Looper updateThreadLooper;
+    // Runs frame rendering.
     private Thread frameThread;
     private Looper frameThreadLooper;
+    // For instantiating CountDownLatches.
     private final int NUMBER_OF_THREADS = 2;
 
     // Concurrent - for simplicity, define as few as possible.
-    // Always used in no more than one usynchronized blocks, so no need to be volatile?
+    // Always used in no more than one un-synchronized blocks, so no need to be volatile?
     private final Object monitorUpdateFrame = new Object();
     private final Object monitorControl = new Object();
     private CountDownLatch pauseLatch; // Makes sure all necessary threads pause before returning pauseGame.
@@ -81,15 +84,15 @@ public abstract class AbstractEngine
 
     // Objs - remember to cleanup those that can be!
     private Choreographer vsync;
-    private List<GameState> gameStates; // We want to use it like a queue, but we need to access the first two elements, so it cannot be one.
-    private GameState lastVisualizedGameState = null; //TODO: try to remove this if possible
+    private List<GameState> gameStates;
+    private GameState lastVisualizedGameState = null; //TODO: try to remove this if possible, it holds on to GameStates too long and makes it annoying to clean them up.
 
-    // Const
+    // Const //TODO: remove?
     public static final int INACTIVE = 0;
     public static final int PLAYING = 1;
     public static final int PAUSED = 2;
 
-    // Etc
+    // Etc. //TODO: sort these
     protected boolean screenTouched = false;
     private long gamePausedTimeStamp;
 
@@ -166,7 +169,7 @@ public abstract class AbstractEngine
             public boolean onTouch(View v, MotionEvent event)
             {
                 // Humor the Android system.
-                v.performClick();
+                //v.performClick(); //TODO: maybe we should just remove this to save time? Is it really necessary anyway? Shouldn't the game swallow all input for itself?
 
                 // Only use touch event if not paused
                 if (isPlaying())
@@ -178,6 +181,7 @@ public abstract class AbstractEngine
             }
         });
 
+        //TODO: fallback if this cannot be done? (when the display returns null).
         Display display = ((WindowManager) gameScreen.asView().getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
         displayRefreshRate = display.getRefreshRate();
         L.d("Display Refresh Rate: " + displayRefreshRate, "optimization");
@@ -190,7 +194,7 @@ public abstract class AbstractEngine
 
     public void startGame()
     {
-        if (getGameWidth() == 0 || getGameHeight() == 0)
+        if (getGameWidth() <= 0 || getGameHeight() <= 0)
         {
             throw new IllegalStateException("Cannot start the game before the screen has been given dimensions!");
         }
@@ -526,7 +530,7 @@ public abstract class AbstractEngine
                 }
 
                 // Prepare for next frame now, when we have all the time in the world.
-                // TODO: only do this if we actually have extra time, do not miss next frame callback!
+                // TODO: only do this if we actually have extra time, do not miss next frame callback! ? maybe.....
                 if (gameScreen.hasInitialized() && !gameScreen.hasPreparedPaint())
                 {
                     gameScreen.preparePaint();
@@ -542,13 +546,13 @@ public abstract class AbstractEngine
     /**
      * Stop update and frame threads.
      * Only return after the threads finish their current loop execution (stop completely).
-     * Then, cleanup.
-     * This method must be called before all references are destroyed, so tht cleanup can happen.
+     * After calling stopGame, the AbstractEngine is no longer usable.
+     * Cleanup happens in this method.
      */
     public void stopGame()
     {
         synchronized (monitorControl)
-        {
+        { //TODO: any reason not to move these checks outside the sync block?
             if (Thread.currentThread().getName().equals(gameScreen.asView().getContext().getString(R.string.update_thread_name)))
             {
                 throw new IllegalThreadStateException("Cannot be called from "
@@ -573,14 +577,18 @@ public abstract class AbstractEngine
             }
 
             // Check if we are paused.
+            // If so, we must first pause the game before we can attempt to stop it.
             if (isPlaying())
             {
+                // Will not return until the game is paused.
                 pauseGame();
             }
 
             stopLatch = new CountDownLatch(NUMBER_OF_THREADS);
             stopThreads = true;
 
+            // Now we know the threads are paused, and we have set them up to stop when they can.
+            // We can finally resume the game so they can stop.
             resumeGame();
 
             try
@@ -615,6 +623,7 @@ public abstract class AbstractEngine
         }
 
         // Now cleanup all references.
+        // After calling stopGame, this engine is no longer usable.
         gameScreen.cleanup();
         gameScreen = null;
         updateThread = null;
@@ -628,12 +637,12 @@ public abstract class AbstractEngine
     }
 
     /**
-     * Pause the threads
+     * Pause the threads.
      */
     public void pauseGame()
     {
         synchronized (monitorControl)
-        {
+        { //TODO: any reason not to move these checks outside the sync block?
             if (Thread.currentThread().getName().equals(gameScreen.asView().getContext().getString(R.string.update_thread_name)))
             {
                 throw new IllegalThreadStateException("Cannot be called from "
@@ -659,9 +668,13 @@ public abstract class AbstractEngine
 
             pauseLatch = new CountDownLatch(NUMBER_OF_THREADS);
 
-            // Tell threads to pause
+            // Tell threads to pause.
             pauseThreads = true;
 
+            // Wait for threads to pause.
+            // We do not need to worry that the threads have counted down the latch to 0 before
+            // we actually call await on it, because await specifies that in such a case, it will
+            // simply return immediately.
             try
             {
                 pauseLatch.await();
@@ -700,7 +713,7 @@ public abstract class AbstractEngine
         }
 
         // When we resume, time has passed, so push game states ahead
-        // because they are not invalid yet. (Visual fix).
+        // because they are not invalid yet. (Visual fix). //TODO: this does not seem to be working well enough.
         long currentTimeStamp = System.nanoTime();
         long sincePause = currentTimeStamp - gamePausedTimeStamp;
         for (GameState gameState : gameStates)
@@ -757,7 +770,7 @@ public abstract class AbstractEngine
     }
 
     @RestrictTo(RestrictTo.Scope.SUBCLASSES)
-    protected Object getUpdateMonitor()
+    protected Object getUpdateMonitor() //TODO: remove? standardize the synchronization first, and how input is handled, then make a decision.
     {
         return monitorUpdateFrame;
     }

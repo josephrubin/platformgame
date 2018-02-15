@@ -11,6 +11,6 @@ public interface Camera
     void view(Canvas canvas); //TODO: change the method names.
     void unview(Canvas canvas);
 
-    boolean isVisible(Paintable paintable);
+    boolean isVisible(DisplayEntity paintable);
     boolean isInbounds(Entity entity);
 }

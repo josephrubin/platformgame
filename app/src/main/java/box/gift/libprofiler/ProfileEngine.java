@@ -26,12 +26,10 @@ public class ProfileEngine extends AbstractEngine
     public static final String PLATFORMS = "platforms";
     public static final String LAND_EMITTER = "landEmitter";
     public static final String SCORE = "score";
-    public static final String ATTACK = "attack";
 
     private Player player;
     private LinkedList<Platform> platforms;
     private float lastPlatformY;
-    //private Attack attack = null;
 
     private final int platformDistance = 450;
 

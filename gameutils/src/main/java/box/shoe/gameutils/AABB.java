@@ -5,6 +5,9 @@ import android.graphics.RectF;
 
 /**
  * Created by Joseph on 2/15/2018.
+ * Unclear yet what this represents.
+ * But for now, the Axis-Aligned-Bonding-Box class serves to add
+ * some functionality to a bare RectF.
  */
 
 public class AABB extends RectF
@@ -12,7 +15,7 @@ public class AABB extends RectF
     // >> Add some new methods.
     /**
      * Offset to a specific (top) position,
-     * keeping its width and height the same.
+     * keeping width and height the same.
      *
      * @param newTop    The new "top" coordinate
      */
@@ -23,7 +26,7 @@ public class AABB extends RectF
 
     /**
      * Offset to a specific (right) position,
-     * keeping its width and height the same.
+     * keeping width and height the same.
      *
      * @param newRight    The new "right" coordinate
      */
@@ -34,7 +37,7 @@ public class AABB extends RectF
 
     /**
      * Offset to a specific (bottom) position,
-     * keeping its width and height the same.
+     * keeping width and height the same.
      *
      * @param newBottom    The new "bottom" coordinate
      */
@@ -45,7 +48,7 @@ public class AABB extends RectF
 
     /**
      * Offset to a specific (left) position,
-     * keeping its width and height the same.
+     * keeping width and height the same.
      *
      * @param newLeft    The new "left" coordinate
      */
@@ -88,6 +91,11 @@ public class AABB extends RectF
     public AABB(AABB aabb)
     {
         super(aabb);
+    }
+
+    public AABB(RectF r)
+    {
+        super(r);
     }
 
     public AABB(Rect r)

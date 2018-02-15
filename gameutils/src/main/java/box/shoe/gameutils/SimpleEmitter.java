@@ -12,7 +12,7 @@ import java.util.Map;
  * Created by Joseph on 12/19/2017.
  */
 
-public class SimpleEmitter implements Emitter, Paintable
+public class SimpleEmitter implements Emitter
 {
     private Paint paint;
     private HashMap<DisplayEntity, Integer> particles;
@@ -56,7 +56,6 @@ public class SimpleEmitter implements Emitter, Paintable
         }
     }
 
-    @Override
     public void paint(Canvas canvas, Resources resources)
     {
         for (DisplayEntity particle : particles.keySet())
