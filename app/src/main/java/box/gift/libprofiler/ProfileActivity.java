@@ -2,9 +2,9 @@ package box.gift.libprofiler;
 
 import android.content.Context;
 
-import box.shoe.gameutils.AbstractEngine;
+import box.shoe.gameutils.engine.AbstractEngine;
 import box.shoe.gameutils.AbstractGameActivity;
-import box.shoe.gameutils.Screen;
+import box.shoe.gameutils.screen.Screen;
 
 /**
  * Created by Joseph on 2/8/2018.
@@ -49,8 +49,8 @@ public class ProfileActivity extends AbstractGameActivity
     }
 
     @Override
-    protected int provideGameSplashColorId()
+    protected boolean pauseMenuEnabled()
     {
-        return 0;
+        return false;
     }
 }

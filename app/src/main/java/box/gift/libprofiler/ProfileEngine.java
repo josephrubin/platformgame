@@ -1,14 +1,15 @@
 package box.gift.libprofiler;
 
+import android.view.Choreographer;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import box.shoe.gameutils.AbstractEngine;
-import box.shoe.gameutils.Emitter;
+import box.shoe.gameutils.engine.AbstractEngine;
 import box.shoe.gameutils.GameEvents;
-import box.shoe.gameutils.GameState;
+import box.shoe.gameutils.engine.GameState;
 import box.shoe.gameutils.Rand;
-import box.shoe.gameutils.Screen;
+import box.shoe.gameutils.screen.Screen;
 import box.shoe.gameutils.Vector;
 import box.shoe.gameutils.Weaver;
 
@@ -24,7 +25,6 @@ public class ProfileEngine extends AbstractEngine
 
     public static final String PLAYER = "player";
     public static final String PLATFORMS = "platforms";
-    public static final String LAND_EMITTER = "landEmitter";
     public static final String SCORE = "score";
 
     private Player player;
@@ -34,10 +34,6 @@ public class ProfileEngine extends AbstractEngine
     private final int platformDistance = 450;
 
     private Rand random;
-
-    // Particles.
-    private Emitter landEmitter;
-    private Emitter jumpEmitter;
 
     private int score = 0;
 
@@ -80,7 +76,6 @@ public class ProfileEngine extends AbstractEngine
         }
 
         float playerOldBottom = player.body.bottom;
-        boolean grounded = player.grounded;
         player.update();
         player.offGround();
 
@@ -179,7 +174,7 @@ public class ProfileEngine extends AbstractEngine
         int h = getGameHeight() / 34;
 
         // Random y pos.
-        double favorLowerFactor = 0.9;
+        double favorLowerFactor = 0.87;
         int y = (int) Math.max(yMin, random.intFrom(yMin, yMax - h) * favorLowerFactor);
 
         // Random x pos factor.
@@ -197,15 +192,7 @@ public class ProfileEngine extends AbstractEngine
         platforms.add(new Platform(x, y, w, h));
 
         lastPlatformY = y;
-/*
-        // Maybe create an enemy, if the platform is long enough.
-        if (w > 500 && random.intFrom(0, 1) == 0)
-        {
-            int enemyHeight = getGameHeight() / 30;
-            int enemyWidth = enemyHeight;
-            enemies.add(new Enemy(x + (2 * w / 3) - (enemyWidth / 2), y - enemyHeight, enemyWidth, enemyHeight));
-        }
-*/
+        
         // Maybe generate a second platform.
         if (!secondPlatform)
         {
@@ -225,7 +212,6 @@ public class ProfileEngine extends AbstractEngine
     {
         gameState.put(PLAYER, player);
         gameState.put(PLATFORMS, platforms);
-        //gameState.put(LAND_EMITTER, landEmitter);
         gameState.put(SCORE, score / 2);
     }
 /*

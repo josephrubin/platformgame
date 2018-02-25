@@ -131,14 +131,21 @@ public class Entity/* implements Poolable*/
      * they register for (and also to throw the Entity back in a Pool if it came from one).
      */
     @Override
-    protected void finalize()
+    protected void finalize() throws Throwable
     {
-        if (!cleaned) //TODO: only in debug mode
+        try
         {
-            // We log a warning because throwing an error here will not stop program execution
-            // anyway and there is technically no 'error' here. For all we know, the Entities do not
-            // need to be cleaned up. This warning exists for debug purposes only.
-            Log.w("Entity Finalizer", getClass().getName() + "|" + this + " was garbage collected before being cleaned! Try calling cleanup() on Entities that you are done with before de-referenceing them.");
+            if (!cleaned) //TODO: only in debug mode
+            {
+                // We log a warning because throwing an error here will not stop program execution
+                // anyway and there is technically no 'error' here. For all we know, the Entities do not
+                // need to be cleaned up. This warning exists for debug purposes only.
+                Log.w("Entity Finalizer", getClass().getName() + "|" + this + " was garbage collected before being cleaned! Try calling cleanup() on Entities that you are done with before de-referenceing them.");
+            }
+        }
+        finally
+        {
+            super.finalize();
         }
     }
 

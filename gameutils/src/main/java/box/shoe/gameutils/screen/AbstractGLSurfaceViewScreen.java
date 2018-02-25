@@ -1,14 +1,8 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.screen;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.util.AttributeSet;
 import android.view.View;
 
 import org.jetbrains.annotations.NotNull;
@@ -16,10 +10,12 @@ import org.jetbrains.annotations.NotNull;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import box.shoe.gameutils.engine.GameState;
+
 /**
  * Created by Joseph on 1/31/2018.
  */
-//TODO: unfinished
+//TODO: unfinished, untested. don't use. it might even be removed
 public abstract class AbstractGLSurfaceViewScreen extends GLSurfaceView implements Screen, GLSurfaceView.Renderer
 {
     private volatile boolean surfaceReady = false;
@@ -57,7 +53,7 @@ public abstract class AbstractGLSurfaceViewScreen extends GLSurfaceView implemen
             if (readyForPaintingListener != null)
             {
                 readyForPaintingListener.run();
-                unregisterReadyForPaintingListener();
+                clearReadyForPaintingListener();
             }
         }
     }
@@ -88,7 +84,7 @@ public abstract class AbstractGLSurfaceViewScreen extends GLSurfaceView implemen
     }
 
     @Override
-    public void unpreparePaint()
+    public void clearScreen()
     {
 
     }
@@ -97,12 +93,6 @@ public abstract class AbstractGLSurfaceViewScreen extends GLSurfaceView implemen
     public boolean hasPreparedPaint()
     {
         return preparedToPaint;
-    }
-
-    @Override
-    public Bitmap getScreenshot()
-    {
-        return null;
     }
 
     @Override
@@ -120,18 +110,6 @@ public abstract class AbstractGLSurfaceViewScreen extends GLSurfaceView implemen
     }
 
     @Override
-    public void paintStatic(Bitmap bitmap)
-    {
-
-    }
-
-    @Override
-    public void paintStatic(int color)
-    {
-
-    }
-
-    @Override
     public void cleanup()
     {
 
@@ -144,7 +122,7 @@ public abstract class AbstractGLSurfaceViewScreen extends GLSurfaceView implemen
     }
 
     @Override
-    public void unregisterReadyForPaintingListener()
+    public void clearReadyForPaintingListener()
     {
         readyForPaintingListener = null;
     }

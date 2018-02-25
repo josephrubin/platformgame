@@ -1,4 +1,4 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.engine;
 
 import android.content.Context;
 import android.os.Build;
@@ -10,6 +10,7 @@ import android.support.annotation.CallSuper;
 import android.support.annotation.IntDef;
 import android.support.annotation.RestrictTo;
 import android.util.Log;
+import android.util.LogPrinter;
 import android.view.Choreographer;
 import android.view.Display;
 import android.view.MotionEvent;
@@ -23,6 +24,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import box.gift.gameutils.R;
+import box.shoe.gameutils.debug.Benchmarker;
+import box.shoe.gameutils.debug.L;
+import box.shoe.gameutils.screen.Screen;
 
 /**
  * Created by Joseph on 10/23/2017.
@@ -32,9 +36,10 @@ import box.gift.gameutils.R;
  * Frames are painted at each new VSYNC (Screen refresh), supplied by internal Choreographer.
  * Because these are not aligned, the engine interpolates between two game states for frame painting based on time,
  * and gives the interpolated game state to the Screen supplied to the constructor.
- */
+ */ //TODO: standardize how random instances are used.
 public abstract class AbstractEngine //TODO: redo input system. make it easy, usable.
 { //TODO: remove isActive()/isPlaying() and replace with a single state variable.
+    //TODO: need an easier way to load scaled bitmaps. use preload scaling if possible (pow of 2), and after loading scaling otherwise. Have pixel art mode to disable filtering/anti-aliasing.
     // Define the possible UPS options, which are factors of 1000 (so we get an even number of MS per update).
     // This is not a hard requirement, and the annotation may be suppressed,
     // at the risk of possible jittery frame display. //TODO: is this actually a real concern?
@@ -85,7 +90,6 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
     // Objs - remember to cleanup those that can be!
     private Choreographer vsync;
     private List<GameState> gameStates;
-    private GameState lastVisualizedGameState = null; //TODO: try to remove this if possible, it holds on to GameStates too long and makes it annoying to clean them up.
 
     // Const //TODO: remove?
     public static final int INACTIVE = 0;
@@ -93,8 +97,7 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
     public static final int PAUSED = 2;
 
     // Etc. //TODO: sort these
-    protected boolean screenTouched = false;
-    private long gamePausedTimeStamp;
+    protected volatile boolean screenTouched = false;
 
     // Fixed display mode - display will attempt to paint
     // pairs of updates for a fixed amount of time (expectedUpdateDelayNS)
@@ -125,7 +128,7 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
 
     private double displayRefreshRate;
 
-    public AbstractEngine(@UPS_Options int targetUPS, Screen screen) //target ups should divide evenly into 1000000000, updates are accurately caleld to within about 10ms
+    public AbstractEngine(@UPS_Options int targetUPS, Screen screen) //target ups should divide evenly into 1000000000, updates are accurately called to within about 10ms
     {
         this.targetUPS = targetUPS;
         this.expectedUpdateTimeMS = 1000 / this.targetUPS;
@@ -181,10 +184,18 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
             }
         });
 
+        //TODO: a different way to get it?
+        /*
+
+        DisplayInfo di = DisplayManagerGlobal.getInstance().getDisplayInfo(
+                Display.DEFAULT_DISPLAY);
+        return di.getMode().getRefreshRate();
+
+         */
         //TODO: fallback if this cannot be done? (when the display returns null).
         Display display = ((WindowManager) gameScreen.asView().getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
         displayRefreshRate = display.getRefreshRate();
-        L.d("Display Refresh Rate: " + displayRefreshRate, "optimization");
+        //L.d("Display Refresh Rate: " + displayRefreshRate, "optimization");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
         {
@@ -359,9 +370,14 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
             private long debugLastFrameTimeNS = 0L;
             private double debugFramesPerSecond;
 
+            private long beginFrameThreadTimeMS;
+            private boolean skipNextFrame = false;
+
             @Override
             public void doFrame(long frameTimeNanos)
             {
+                beginFrameThreadTimeMS = SystemClock.currentThreadTimeMillis();
+
                 // Correct for minor difference in vsync time.
                 // This is probably totally unnecessary. (And will only change frameTimeNanos in a sufficiently high API anyway)
                 frameTimeNanos -= vsyncOffsetNanos;
@@ -381,6 +397,21 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
 
                 synchronized (monitorUpdateFrame)
                 {
+                    // Skip a frame if last frame indicated that it took too long.
+                    if (skipNextFrame)
+                    {
+                        skipNextFrame = false;
+                        // If we plan on stopping or pausing during this frame, then
+                        // we will not skip it, and instead continue as normal.
+                        if (!stopThreads && !pauseThreads)
+                        {
+                            // Put ourselves up for the next frame...
+                            vsync.postFrameCallback(this);
+                            // ...and don't do any further work this frame.
+                            return;
+                        }
+                    } //TODO: we may need to not skip if we just came out of a pause because the engine might misidentify that as a frame that took too long.
+
                     // Pause game.
                     // Spin lock when we want to pause.
                     while (pauseThreads)
@@ -392,15 +423,8 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                             {
                                 if (gameScreen.hasPreparedPaint())
                                 {
-                                    if (lastVisualizedGameState != null)
-                                    {
-                                        gameScreen.paintFrame(lastVisualizedGameState);
-                                    }
-                                    else
-                                    {
-                                        // Unlock the canvas without posting anything.
-                                        gameScreen.unpreparePaint();
-                                    }
+                                    // Unlock the canvas without posting anything.
+                                    gameScreen.clearScreen(); //TODO: we should really be posting the most recent state, we don't want to clear the screen.
                                 }
                                 pauseLatch.countDown();
                             }
@@ -414,7 +438,7 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                     }
                     frameThreadPaused = false;
 
-                    // Stop game if prompted
+                    // Stop game if prompted.
                     if (stopThreads)
                     {
                         stopLatch.countDown();
@@ -429,7 +453,7 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                     // but we won't know that an issue occurred.
                     vsync.postFrameCallback(this);
 
-                    // Paint frame
+                    // Paint frame.
                     if (gameScreen.hasPreparedPaint())
                     {
                         GameState oldState;
@@ -437,14 +461,15 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
 
                         while (true)
                         {
-                            if (gameStates.size() >= 2) // We need two states to draw (saveInterpolationFields between them)
+                            // We need two states to draw, to interpolate between them.
+                            if (gameStates.size() >= 2)
                             {
-                                // Get the first two saved states
+                                // Get the first two saved states.
                                 oldState = gameStates.get(0);
                                 newState = gameStates.get(1);
 
-                                // Interpolate based on time that has past since the second active game state
-                                // as a fraction of the time between the two active states.
+                                // Interpolate based on time that has past since the second active
+                                // game state as a fraction of the time between the two active states.
                                 double interpolationRatio;
 
                                 // TODO: auto switch paint modes in response to update lag. priority=low
@@ -510,9 +535,7 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                                             }
                                         }
                                     }
-
                                     gameScreen.paintFrame(newState);
-                                    lastVisualizedGameState = newState;
                                     break;
                                 }
                             }
@@ -534,6 +557,20 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                 if (gameScreen.hasInitialized() && !gameScreen.hasPreparedPaint())
                 {
                     gameScreen.preparePaint();
+                }
+
+                // If we took more time than we are allowed, it may be that we are stuck
+                // in a "death spiral", where we are constantly unable to catch up due to
+                // the constant demand to generate the next frame. So we ease up a little bit
+                // by skipping the next frame, so that we do not get screen jank.
+                if (SystemClock.currentThreadTimeMillis() - beginFrameThreadTimeMS > 17) //TODO: not all phones are 60fps csync, replace with dynamically fetched value
+                {
+                    skipNextFrame = true;
+                    Log.i(AbstractEngine.this.getClass().getSimpleName(),
+                            "We took too long to generate this past frame, so we will skip " +
+                                    "the next one to ease up on the load and avoid jank. If this " +
+                                    "is happening a lot, your drawing routine may be doing too " +
+                                    "much work!");
                 }
             }
         };
@@ -631,7 +668,6 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
         frameThread = null;
         frameThreadLooper = null;
         gameStates.clear(); //TODO: throw interps to the pool?
-        lastVisualizedGameState = null;
 
         //onStopGame();
     }
@@ -684,7 +720,6 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                 e.printStackTrace();
             }
 
-            gamePausedTimeStamp = System.nanoTime();
             paused = true;
         }
     }
@@ -712,14 +747,7 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
             throw new IllegalStateException("Cannot resume game that isn't paused.");
         }
 
-        // When we resume, time has passed, so push game states ahead
-        // because they are not invalid yet. (Visual fix). //TODO: this does not seem to be working well enough.
-        long currentTimeStamp = System.nanoTime();
-        long sincePause = currentTimeStamp - gamePausedTimeStamp;
-        for (GameState gameState : gameStates)
-        {
-            gameState.setTimeStamp(gameState.getTimeStamp() + sincePause);// + 1000000);
-        }
+        //TODO: When we resume, time has passed, so push game states ahead because they are not invalid yet. (Visual fix).
 
         pauseThreads = false;
         paused = false;

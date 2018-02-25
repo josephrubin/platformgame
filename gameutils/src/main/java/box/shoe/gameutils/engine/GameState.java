@@ -1,30 +1,33 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.engine;
 
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+
+import box.shoe.gameutils.pooling.AbstractObjectPool;
+import box.shoe.gameutils.pooling.FactoryObjectPool;
 
 /**
  * Created by Joseph on 12/31/2017.
  * The job of a GameState is two fold.
  * 1) Keep track of all data that the Engine wants to pass along to the Screen for painting.
- * 2) Keep track of all Entities that exist at the update that generated this GameState
+ * 2) Keep track of all Interpolatables that exist at the update that generated this GameState
  *      so that they can be interpolated.
  */
 
 public class GameState
-{
-    /*pack*/ static ObjectPool<GameState> POOL = new ObjectPool<>(6, new GameState.Factory());
+{//TODO: use object lot rather than a pool, for speed?
+    //TODO: move library game states to the game engine as normal fields?
+    /*pack*/ static FactoryObjectPool<GameState> POOL = new FactoryObjectPool<>(6, new Factory());
 
     // The time at which the update which generated this GameState occurred.
     private volatile long timeStamp;
 
-    // All data necessary for painting of this GameState.
+    // All data necessary for painting this GameState. //TODO: this may be removed if we change how we pass info from engine to screen.
     private Map<String, Object> data;
 
-    // Storage of all Entities along with their provided Interpolatables.
-    // Used to interpolate values for the Entities at this GameState.
+    // Storage of all Interpolatables along with their provided InterpolatablesCarriers.
+    // Used to interpolate values for the Interpolatables at this GameState.
     /*pack*/ WeakHashMap<Interpolatable, InterpolatablesCarrier> interps;
 
     /*pack*/ GameState()
@@ -65,7 +68,7 @@ public class GameState
         interps.clear();
     }
 
-    private static class Factory implements ObjectPool.Factory
+    private static class Factory implements FactoryObjectPool.Factory<GameState>
     {
         @Override
         public GameState create()

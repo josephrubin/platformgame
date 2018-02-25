@@ -11,7 +11,7 @@ import java.util.Set;
  */
 
 public class TaskScheduler
-{
+{ //TODO: just have tasks be scheduled based on number of updates, and not ms. Timing based on ms was unreliable, and not super helpful.
     // Updates per millisecond of the engine that calls tick().
     // Used to calculate approx how many ticks for a given time.
     private final double UPMS;

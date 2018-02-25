@@ -1,42 +1,30 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.pooling;
 
-import android.support.annotation.Nullable;
-
-import java.util.Arrays;
-import java.util.HashSet;
+import android.support.annotation.RestrictTo;
 
 /**
  * Created by Joseph on 2/7/2018.
  */
 
-public class ObjectPool<T>
+public abstract class AbstractObjectPool<T>
 {
-    private ObjectLot<T> objectLot;
-    //private HashSet<T> register;
-    private Factory<T> factory;
+    private ObjectLot objectLot;
 
-    public ObjectPool(int initialSize, @Nullable ObjectPool.Factory<T> factory)
+    public AbstractObjectPool(int initialSize)
     {
         if (initialSize < 0)
         {
             throw new IllegalArgumentException("Size cannot be less than 0!");
         }
-        objectLot = new ObjectLot<>(initialSize);
-        //register = new HashSet<>(initialSize);
-        this.factory = factory;
-        if (this.factory != null)
-        {
-            populate();
-        }
+        objectLot = new ObjectLot(initialSize);
     }
 
-    private void populate()
+    @RestrictTo(RestrictTo.Scope.SUBCLASSES)
+    protected void populate()
     {
         for (int i = 0; i < objectLot.size; i++)
         {
-            T obj = factory.create();
-            objectLot.give(obj);
-            //register.add(obj);
+            objectLot.give(createNew());
         }
     }
 
@@ -45,15 +33,11 @@ public class ObjectPool<T>
         T obj;
         if (objectLot.isEmpty())
         {
-            if (factory == null)
-            {
-                throw new IllegalStateException("The pool is empty and no factory was defined for object creation!");
-            }
-            obj = factory.create();
+            obj = createNew();
         }
         else
         {
-            obj = objectLot.take();
+            obj = (T) objectLot.take();
         }
 
         //register.remove(obj);
@@ -71,19 +55,12 @@ public class ObjectPool<T>
         {
             return false;
         }
-        /*if (register.contains(obj))
-        {
-            // Don't put an object in twice.
-            return false;
-        }*/
         if (objectLot.isFull())
         {
-            return false;
+            return false; //TODO: grow lot....
         }
 
         objectLot.give(obj);
-        //register.add(obj);
-
         return true;
     }
 
@@ -91,11 +68,7 @@ public class ObjectPool<T>
     {
         objectLot.cleanup();
         objectLot = null;
-        //register = null;
     }
 
-    public interface Factory<F>
-    {
-        F create();
-    }
+    protected abstract T createNew();
 }

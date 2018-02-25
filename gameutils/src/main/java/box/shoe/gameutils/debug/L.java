@@ -1,4 +1,4 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.debug;
 
 import android.util.Log;
 import java.util.HashMap;

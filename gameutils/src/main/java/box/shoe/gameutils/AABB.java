@@ -13,6 +13,23 @@ import android.graphics.RectF;
 public class AABB extends RectF
 {
     // >> Add some new methods.
+
+    // > Collisions.
+    /**
+     * Returns true if this AABB intersects the specified AABB.
+     * In no event is this AABB modified. No check is performed to see
+     * if either AABB is empty. To record the intersection, use intersect()
+     * or setIntersect().
+     *
+     * @param other the AABB to check for intersection against.
+     * @return true iff the specified AABB intersects this AABB. In
+     *              no event is this AABB modified.
+     */
+    public boolean intersects(RectF other) {
+        return this.left < other.right && other.left < this.right
+                && this.top < other.bottom && other.top < this.bottom;
+    }
+
     /**
      * Offset to a specific (top) position,
      * keeping width and height the same.
@@ -57,6 +74,17 @@ public class AABB extends RectF
         left = newLeft;
     }
 
+    /**
+     * Offset to a specific (center) position,
+     * keeping width and height the same.
+     *
+     * @param newCenterX    The new "center" x coordinate
+     * @param newCenterY    The new "center" y coordinate
+     */
+    public void offsetCenterTo(float newCenterX, float newCenterY) {
+        offsetTo(newCenterX - width() / 2, newCenterY - height() / 2);
+    }
+
     // >> Natural extension of the great RectF constructors.
     /**
      * Create a new empty AABB. All coordinates are initialized to 0.
@@ -79,18 +107,6 @@ public class AABB extends RectF
     public AABB(float left, float top, float right, float bottom)
     {
         super(left, top, right, bottom);
-    }
-
-    /**
-     * Create a new AABB, initialized with the values in the specified
-     * AABB (which is left unmodified).
-     *
-     * @param aabb The AABB whose coordinates are copied into the new
-     *          rectangle.
-     */
-    public AABB(AABB aabb)
-    {
-        super(aabb);
     }
 
     public AABB(RectF r)

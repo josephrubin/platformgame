@@ -1,16 +1,18 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.engine;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
+
+import box.shoe.gameutils.pooling.AbstractObjectPool;
+import box.shoe.gameutils.pooling.FactoryObjectPool;
 
 /**
  * Created by Joseph on 12/31/2017.
  */
 //TODO: remove this class, just pass arrays instead, and the interface should include a method for the number of interps it will provide, as well as the provide/recall methods.
 public class InterpolatablesCarrier
-{
-    /*pack*/ static ObjectPool<InterpolatablesCarrier> POOL = new ObjectPool<>(2000, new InterpolatablesCarrier.Factory());
+{//TODO: use object lot rather than a pool, for speed? //initialSize should probably be way lower, or at the very least configurable.
+    /*pack*/ static FactoryObjectPool<InterpolatablesCarrier> POOL = new FactoryObjectPool<>(2000, new InterpolatablesCarrier.Factory());
 
     private ArrayList<Float> interps; //TODO: should probably use array. see above.
 
@@ -64,7 +66,7 @@ public class InterpolatablesCarrier
         return interps.isEmpty();
     }
 
-    private static class Factory implements ObjectPool.Factory
+    private static class Factory implements FactoryObjectPool.Factory<InterpolatablesCarrier>
     {
 
         @Override

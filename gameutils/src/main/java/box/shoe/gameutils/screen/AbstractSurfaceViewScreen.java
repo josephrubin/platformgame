@@ -1,21 +1,21 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.screen;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.support.annotation.NonNull;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 
+import box.shoe.gameutils.engine.GameState;
+
 /**
  * Created by Joseph on 10/23/2017.
  */
-//fixme: buffering just for screenshot is taking a lot more thread cpu time!
-    //TODO: when game resumes, should not jump so much from previous frame!
+//TODO: when game resumes, should not jump so much from previous frame! (engine problem).
 public abstract class AbstractSurfaceViewScreen extends SurfaceView implements SurfaceHolder.Callback, Screen
 {
     private SurfaceHolder holder;
@@ -35,6 +35,8 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
         this.readyForPaintingListener = readyForPaintingListener;
         holder = getHolder();
         holder.addCallback(this);
+        holder.setFormat(PixelFormat.TRANSPARENT);
+        setClickable(true);
     }
 /*
     public void giveDataReference(AbstractEngine abstractData)
@@ -51,10 +53,6 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
             throw new IllegalStateException("Surface is not ready to paint. Please call canVisualize() to check.");
         }
         surfaceCanvas = holder.lockCanvas();
-
-        // Set coordinate origin to (0, 0) and make +x = right, +y = up.
-        /*surfaceCanvas.translate(0, bufferCanvas.getHeight());
-        surfaceCanvas.scale(1, -1);*/
 
         preparedToPaint = true;
     }
@@ -81,46 +79,15 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
     public final void paintFrame(@NonNull GameState gameState)
     {
         checkState();
-
-        // Clear the canvas
-        surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
         paint(surfaceCanvas, gameState);
-
         postCanvas();
     }
 
     @Override
-    public void paintStatic(@NonNull Bitmap bitmap)
-    {
-        checkState();
-
-        // Clear the canvas
-        surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
-        // Draw the bitmap
-        surfaceCanvas.drawBitmap(bitmap, 0, 0,null);
-
-        postCanvas();
-    }
-
-    @Override
-    public void paintStatic(int color)
-    {
-        checkState();
-
-        // Draw the color
-        surfaceCanvas.drawColor(color);
-
-        postCanvas();
-    }
-
-    @Override
-    public void unpreparePaint()
+    public void clearScreen()
     {
         checkState();
         surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
         postCanvas();
     }
 
@@ -129,6 +96,7 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
     @Override
     public void surfaceCreated(SurfaceHolder holder)
     {
+        this.holder = holder;
         surfaceReady = true;
     }
 
@@ -138,10 +106,26 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
         if (width > 0 && height > 0)
         {
             hasDimensions = true;
-            if (readyForPaintingListener != null)
+            synchronized (this)
             {
-                readyForPaintingListener.run();
-                unregisterReadyForPaintingListener();
+                if (readyForPaintingListener != null)
+                {
+                    this.readyForPaintingListener.run();
+                    clearReadyForPaintingListener();
+                }
+            }
+        }
+    }
+
+    public void setReadyForPaintingListener(Runnable readyForPaintingListener)
+    {
+        this.readyForPaintingListener = readyForPaintingListener;
+        synchronized (this)
+        {
+            if (hasDimensions && surfaceReady && readyForPaintingListener != null)
+            {
+                this.readyForPaintingListener.run();
+                clearReadyForPaintingListener();
             }
         }
     }
@@ -152,7 +136,7 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
         return this;
     }
 
-    public void unregisterReadyForPaintingListener() //Irreversable
+    public void clearReadyForPaintingListener() //Irreversable
     {
         readyForPaintingListener = null;
     }
@@ -165,7 +149,7 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
         }
         surfaceReady = false;
         this.holder = null;
-        readyForPaintingListener = null;
+        clearReadyForPaintingListener();
         surfaceCanvas = null;
     }
 
@@ -185,10 +169,5 @@ public abstract class AbstractSurfaceViewScreen extends SurfaceView implements S
     public boolean hasPreparedPaint()
     {
         return preparedToPaint;
-    }
-
-    public Bitmap getScreenshot()
-    {
-        return null;
     }
 }

@@ -1,6 +1,8 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.engine;
 
 import android.support.annotation.CallSuper;
+
+import box.shoe.gameutils.Service;
 
 /**
  * Created by Joseph on 2/14/2018.

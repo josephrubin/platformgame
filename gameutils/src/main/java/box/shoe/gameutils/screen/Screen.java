@@ -1,7 +1,8 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.screen;
 
-import android.graphics.Bitmap;
 import android.view.View;
+
+import box.shoe.gameutils.engine.GameState;
 
 /**
  * Created by Joseph on 1/1/2018.
@@ -15,14 +16,10 @@ public interface Screen
     boolean hasInitialized();
 
     void preparePaint();
-    void unpreparePaint();
+    void clearScreen();
     boolean hasPreparedPaint();
 
-    Bitmap getScreenshot();
-
     void paintFrame(GameState gameState);
-    void paintStatic(Bitmap bitmap); //TODO: use View setBackground(Drawable) in place of these methods!
-    void paintStatic(int color);
 
     void cleanup();
 
@@ -33,5 +30,6 @@ public interface Screen
 
     void setOnTouchListener(View.OnTouchListener onTouchListener);
 
-    void unregisterReadyForPaintingListener();
+    void setReadyForPaintingListener(Runnable readyForPaintingListener);
+    void clearReadyForPaintingListener();
 }

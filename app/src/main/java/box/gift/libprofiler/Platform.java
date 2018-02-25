@@ -7,7 +7,8 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 
 import box.shoe.gameutils.DisplayEntity;
-import box.shoe.gameutils.Interpolatable;
+import box.shoe.gameutils.Rand;
+import box.shoe.gameutils.engine.Interpolatable;
 
 /**
  * Created by Joseph on 2/9/2018.
@@ -15,38 +16,46 @@ import box.shoe.gameutils.Interpolatable;
 
 public class Platform extends DisplayEntity
 {
-    private static PlatformPaintable paintable = new PlatformPaintable();
+    private static Rand random = new Rand();
+    private Paint paint;
+    private RectF temporaryDrawBounds;
+    private int bottomColor;
 
     public Platform(float initialX, float initialY, float initialWidth, float initialHeight)
     {
         super(initialX, initialY, initialWidth, initialHeight, ProfileEngine.SCROLL_SPEED);
+        temporaryDrawBounds = new RectF();
+        paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        // Pick from various shades of green.
+        int randColorPicker = random.intFrom(0, 2);
+        switch (randColorPicker)
+        {
+            case 0:
+                bottomColor = Color.parseColor("#10A700");
+                break;
+            case 1:
+                bottomColor = Color.parseColor("#10B000");
+                break;
+            case 2: default:
+                bottomColor = Color.parseColor("#12C000");
+                break;
+        }
+
         Interpolatable.SERVICE.addMember(this);
     }
 
     public void paint(Canvas canvas, Resources resources)
     {
-        paintable.paint(canvas, display);
-    }
+        // Shortening our draw rectangle would reduce overdraw but we
+        // need to cover up the rounded bottom, so we must overdraw.
+        paint.setColor(Color.parseColor("#04f204"));
+        float rad = display.height() / 3;
+        canvas.drawRoundRect(display, rad, rad, paint);
 
-    private static class PlatformPaintable
-    {
-        private static Paint paint;
-
-        private PlatformPaintable()
-        {
-            paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        }
-
-        public void paint(Canvas canvas, RectF display)
-        {
-            paint.setColor(Color.rgb(0, 100, 0));
-            float rad = display.height() / 4;
-            canvas.drawRoundRect(display, rad, rad, paint);
-
-            paint.setColor(Color.GREEN);
-            RectF bottomPart = new RectF(display);
-            bottomPart.top += bottomPart.height() / 2;
-            canvas.drawRect(bottomPart, paint);
-        }
+        paint.setColor(bottomColor);
+        temporaryDrawBounds.set(display);
+        temporaryDrawBounds.top += temporaryDrawBounds.height() / 2;
+        canvas.drawRect(temporaryDrawBounds, paint);
     }
 }

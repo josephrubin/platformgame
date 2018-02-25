@@ -1,23 +1,20 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.screen;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.SurfaceTexture;
 import android.support.annotation.NonNull;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
+
+import box.shoe.gameutils.engine.GameState;
 
 /**
  * Created by Joseph on 10/23/2017.
  */
-//fixme: buffering just for screenshot is taking a lot more thread cpu time!
-//TODO: when game resumes, should not jump so much from previous frame!
+//TODO: unfinished. don't use.
 public abstract class AbstractTextureViewScreen extends TextureView implements TextureView.SurfaceTextureListener, Screen
 {
     private volatile boolean surfaceReady = false;
@@ -79,41 +76,13 @@ public abstract class AbstractTextureViewScreen extends TextureView implements T
     {
         checkState();
 
-        // Clear the canvas
-        surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
         paint(surfaceCanvas, gameState);
 
         postCanvas();
     }
 
     @Override
-    public void paintStatic(@NonNull Bitmap bitmap)
-    {
-        checkState();
-
-        // Clear the canvas
-        surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
-        // Draw the bitmap
-        surfaceCanvas.drawBitmap(bitmap, 0, 0,null);
-
-        postCanvas();
-    }
-
-    @Override
-    public void paintStatic(int color)
-    {
-        checkState();
-
-        // Draw the color
-        surfaceCanvas.drawColor(color);
-
-        postCanvas();
-    }
-
-    @Override
-    public void unpreparePaint()
+    public void clearScreen()
     {
         checkState();
         surfaceCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
@@ -129,7 +98,7 @@ public abstract class AbstractTextureViewScreen extends TextureView implements T
         return this;
     }
 
-    public void unregisterReadyForPaintingListener() //Irreversable
+    public void clearReadyForPaintingListener() //Irreversable
     {
         readyForPaintingListener = null;
     }
@@ -157,11 +126,6 @@ public abstract class AbstractTextureViewScreen extends TextureView implements T
         return preparedToPaint;
     }
 
-    public Bitmap getScreenshot()
-    {
-        return null;
-    }
-
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)
     {
@@ -175,7 +139,7 @@ public abstract class AbstractTextureViewScreen extends TextureView implements T
         if (hasDimensions && readyForPaintingListener != null)
         {
             readyForPaintingListener.run();
-            unregisterReadyForPaintingListener();
+            clearReadyForPaintingListener();
         }
     }
 
@@ -197,7 +161,7 @@ public abstract class AbstractTextureViewScreen extends TextureView implements T
         if (hasDimensions && surfaceReady && readyForPaintingListener != null)
         {
             readyForPaintingListener.run();
-            unregisterReadyForPaintingListener();
+            clearReadyForPaintingListener();
         }
     }
 

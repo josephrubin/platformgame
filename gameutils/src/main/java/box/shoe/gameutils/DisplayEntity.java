@@ -1,13 +1,14 @@
 package box.shoe.gameutils;
 
 import android.annotation.SuppressLint;
-import android.graphics.RectF;
-import android.support.annotation.CallSuper;
+
+import box.shoe.gameutils.engine.Interpolatable;
+import box.shoe.gameutils.engine.InterpolatablesCarrier;
 
 /**
  * Created by Joseph on 2/14/2018.
  */
-
+//TODO: auto add interpolation service on creation, and remove it on cleanup?
 public class DisplayEntity extends Entity implements Interpolatable
 {
     // The screen-space which is occupied by this DisplayEntity.
@@ -54,5 +55,10 @@ public class DisplayEntity extends Entity implements Interpolatable
         display.top = out.recall();
         display.right = out.recall();
         display.bottom = out.recall();
+    }
+
+    public interface Factory
+    {
+        public DisplayEntity create();
     }
 }

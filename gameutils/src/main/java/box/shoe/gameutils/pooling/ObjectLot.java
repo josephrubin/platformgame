@@ -1,14 +1,14 @@
-package box.shoe.gameutils;
+package box.shoe.gameutils.pooling;
 
 /**
  * Created by Joseph on 2/3/2018.
  */
 //TODO: when pools are filled in library pools, should not throw error!
     //TODO: entities should use special kind of pool which removes interpolatablecarriers, and also removes sleeping ones from the global lists kept by gamestates!
-public class ObjectLot<T> //TODO: if object is sleeping, the GameState weak refs should clear, or at least dont copy sleeping obects to the next GameState.... (for Entity pool, not ObjectPool)
+public class ObjectLot //TODO: if object is sleeping, the GameState weak refs should clear, or at least don't copy sleeping objects to the next GameState.... (for Entity pool, not AbstractObjectPool)
 { //TODO: auto allocate to fill pools at the start?
     //TODO: pick smart values for size of all library pools. depending on how many are created vs how many are deleted. if in equal/similar number, smaller values are needed.
-    private T[] sleeping;
+    private Object[] sleeping;
     private int currentIndex;
     public int size;
 
@@ -19,18 +19,18 @@ public class ObjectLot<T> //TODO: if object is sleeping, the GameState weak refs
     @SuppressWarnings("unchecked")
     public ObjectLot(int size)
     {
-        sleeping = (T[]) new Object[size];
+        sleeping = new Object[size];
         currentIndex = -1;
         this.size = sleeping.length;
     }
 
-    public T take()
+    public Object take()
     {
         if (isEmpty())
         {
             throw new IllegalStateException("Pool is empty!");
         }
-        T obj = sleeping[currentIndex];
+        Object obj = sleeping[currentIndex];
         currentIndex--;
         return obj;
     }
@@ -40,7 +40,7 @@ public class ObjectLot<T> //TODO: if object is sleeping, the GameState weak refs
      * (Precondition: the object is not already in the pool. This is not checked. Unknown behavior may follow if this condition is not fulfilled.)
      * @param obj the object to throw back into the pool.
      */
-    public void give(T obj)
+    public void give(Object obj)
     {
         if (obj == null)
         {

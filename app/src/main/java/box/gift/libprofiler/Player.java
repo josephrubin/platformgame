@@ -2,12 +2,14 @@ package box.gift.libprofiler;
 
 import android.content.res.Resources;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 
 import box.shoe.gameutils.DisplayEntity;
-import box.shoe.gameutils.Interpolatable;
+import box.shoe.gameutils.effects.BurstParticleEffect;
+import box.shoe.gameutils.engine.Interpolatable;
 import box.shoe.gameutils.Vector;
 
 /**
@@ -25,8 +27,8 @@ public class Player extends DisplayEntity
     private boolean doubleJumped = true;
     public boolean grounded = false;
 
-    private static final int attackCooldown = 12;
-    private int sinceAttack = attackCooldown;
+    // Particles.
+    private BurstParticleEffect jumpEffect;
 
     public Player(float initialX, float initialY, float initialHeight, float initialWidth)
     {
@@ -34,36 +36,29 @@ public class Player extends DisplayEntity
         acceleration = ACCELERATION_GRAVITY;
         paintable = new PlayerPaintable();
         Interpolatable.SERVICE.addMember(this);
-    }
-/*
-    public Attack requestAttack()
-    {
-        if (sinceAttack >= attackCooldown)
-        {
-            sinceAttack = 0;
-            return attack();
-        }
-        else
-        {
-            return null;
-        }
+
+        // Effects.
+        jumpEffect = new BurstParticleEffect.Builder()
+                .color(Color.BLACK)
+                .size(5)
+                .speed(30)
+                .duration(4)
+                .particleCount(18)
+                .build();
     }
 
-    private Attack attack()
-    {
-        return new Attack(x + width, y, width, height);
-    }
-*/
     public void requestJump()
     {
         if (grounded)
         {
             jump();
+            //jumpEffect.produce(body.centerX(), body.bottom);
         }
         else if (!doubleJumped)
         {
             shortJump();
             doubleJumped = true;
+            //jumpEffect.produce(body.centerX(), body.bottom);
         }
     }
 
@@ -91,20 +86,20 @@ public class Player extends DisplayEntity
     public void update()
     {
         super.update();
-        sinceAttack += 1;
-        sinceAttack = Math.min(sinceAttack, attackCooldown);
+        //jumpEffect.update();
     }
 
     public void paint(Canvas canvas, Resources resources)
     {
         paintable.paint(canvas, resources);
+        //jumpEffect.paint(canvas, resources);
     }
 
     private class PlayerPaintable
     {
         private Rect bounds = new Rect();
         private boolean started = false;
-        private int ind = 0;
+        private int currentDrawableIndex = 0;
         private AnimationDrawable runAnimation;
         private Drawable still;
 
@@ -120,9 +115,9 @@ public class Player extends DisplayEntity
             if (grounded)
             {
                 runAnimation.setBounds(bounds);
-                runAnimation.selectDrawable(ind / 4);
-                ind++;
-                if (ind > 28) ind = 0;
+                runAnimation.selectDrawable(currentDrawableIndex / 4);
+                currentDrawableIndex++;
+                if (currentDrawableIndex > 28) currentDrawableIndex = 0;
                 runAnimation.draw(canvas);
             }
             else

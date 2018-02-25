@@ -3,11 +3,7 @@ package box.shoe.gameutils;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.support.annotation.ColorRes;
 import android.support.annotation.IdRes;
 import android.support.annotation.LayoutRes;
 import android.util.Log;
@@ -17,6 +13,8 @@ import android.view.ViewStub;
 import android.widget.TextView;
 
 import box.gift.gameutils.R;
+import box.shoe.gameutils.engine.AbstractEngine;
+import box.shoe.gameutils.screen.Screen;
 
 //TODO: there should be an interface updateable to make a thing update for entities, taskschedulers. particleeffetc etccc...
 //TODO: place in gameutils module, so that it can be simply extended in the app module. (similarly, the layout files, somehow make customizable still)
@@ -25,7 +23,7 @@ public abstract class AbstractGameActivity extends Activity
     private SharedPreferences sharedPreferences;
     private AbstractEngine gameEngine;
     private Screen gameScreen;
-    private Bitmap screenshot; //TODO: reduce size of stored screenshot! this takes up a lot of space!
+    //private Bitmap screenshot; //TODO: reduce size of stored screenshot! this takes up a lot of space!
 
     private Runnable readyForPaintingListener;
     private Runnable gameOverHandler;
@@ -35,21 +33,16 @@ public abstract class AbstractGameActivity extends Activity
     private ViewGroup gameContainer;
     private View pauseMenu;
 
-    private int gameSplashColor;
+    // Settings. //TODO: organize these better as to how exactly we get the config
+    private boolean pauseMenuEnabled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        try
-        {
-            gameSplashColor = getResources().getColor(provideGameSplashColorId());
-        }
-        catch (Resources.NotFoundException e)
-        {
-            Log.w(getString(R.string.library_name), "provideGameSplashColorId returned an invalid resource ID. Using black.");
-            gameSplashColor = Color.BLACK;
-        }
+
+        // Settings.
+        pauseMenuEnabled = pauseMenuEnabled();
 
         readyForPaintingListener = new Runnable()
         {
@@ -65,17 +58,16 @@ public abstract class AbstractGameActivity extends Activity
                         {
                             if (!gameEngine.isActive()) //TODO: only start if hasn't been started (i.e. do not start if the same engine has simply been stopped).
                             {
-                                gameScreen.preparePaint();
-                                gameScreen.paintStatic(gameSplashColor);
                                 gameEngine.startGame();
                             }
                             else if (!gameEngine.isPlaying())
                             {
-                                if (screenshot != null && !screenshot.isRecycled())
+                                //TODO: show the last frame.
+                                /*if (screenshot != null && !screenshot.isRecycled())
                                 {
                                     gameScreen.preparePaint();
                                     gameScreen.paintStatic(screenshot);
-                                }
+                                }*/
                             }
                         }
                     }
@@ -118,17 +110,20 @@ public abstract class AbstractGameActivity extends Activity
         }
 
         // Programmatically get the Pause Menu layout and inflate the stub.
-        stub = findViewById(R.id.pauseMenuStub);
-        stub.setLayoutResource(providePauseMenuLayoutResId());
-        try
+        if (pauseMenuEnabled)
         {
-            stub.inflate();
-        }
-        catch (IllegalArgumentException e)
-        {
-            Log.w(getString(R.string.library_name), "Pause menu could not be loaded. Did you return a valid layout resource id from providePauseMenuLayoutResId()? Using default.");
-            stub.setLayoutResource(R.layout.default_pause_menu_layout);
-            stub.inflate();
+            stub = findViewById(R.id.pauseMenuStub);
+            stub.setLayoutResource(providePauseMenuLayoutResId());
+            try
+            {
+                stub.inflate();
+            }
+            catch (IllegalArgumentException e)
+            {
+                Log.w(getString(R.string.library_name), "Pause menu could not be loaded. Did you return a valid layout resource id from providePauseMenuLayoutResId()? Using default.");
+                stub.setLayoutResource(R.layout.default_pause_menu_layout);
+                stub.inflate();
+            }
         }
 
         // Save references to various Views we will need.
@@ -137,7 +132,10 @@ public abstract class AbstractGameActivity extends Activity
         gameContainer = findViewById(R.id.gameContainer);
         pauseMenu = findViewById(R.id.pauseMenu);
 
-        hidePauseMenu();
+        if (pauseMenuEnabled)
+        {
+            hidePauseMenu();
+        }
 
         Weaver.hook(GameEvents.GAME_OVER, gameOverHandler);
         Weaver.hook(GameEvents.GAME_QUIT, gameOverHandler);
@@ -188,10 +186,10 @@ public abstract class AbstractGameActivity extends Activity
     private void createGame()
     {
         gameScreen = provideNewScreen(getApplicationContext(), readyForPaintingListener);
-        if (!(gameScreen instanceof View))
+        /*if (!(gameScreen instanceof View))
         {
             throw new IllegalStateException("provideNewScreen() must supply a Screen which is also a View.");
-        }
+        }*/
         gameEngine = provideNewEngine(gameScreen);
     }
 
@@ -210,8 +208,14 @@ public abstract class AbstractGameActivity extends Activity
         // Determine if the game is stopped or just paused.
         if (gameEngine != null && gameEngine.isActive())
         {
-            // Show the pause menu
-            showPauseMenu();
+            if (pauseMenuEnabled)
+            {
+                showPauseMenu();
+            }
+            else
+            {
+                gameScreen.setReadyForPaintingListener(readyForPaintingListener);
+            }
         }
     }
 
@@ -225,11 +229,19 @@ public abstract class AbstractGameActivity extends Activity
     @Override
     public void onWindowFocusChanged(boolean hasFocus)
     {
+        super.onWindowFocusChanged(hasFocus);
         if (gameEngine != null && gameEngine.isActive())
         {
             if (hasFocus && !gameEngine.isPlaying())
             {
-                showPauseMenu();
+                if (pauseMenuEnabled)
+                {
+                    showPauseMenu();
+                }
+                else
+                {
+                    resumeGame();
+                }
             }
             else if (!hasFocus)
             {
@@ -249,7 +261,14 @@ public abstract class AbstractGameActivity extends Activity
         if (pauseGameIfPlaying())
         {
             // On a game pause, since we have not left the activity, show the pause menu.
-            showPauseMenu();
+            if (pauseMenuEnabled)
+            {
+                showPauseMenu();
+            }
+            else
+            {
+                stopGame();
+            }
         }
         else if (gameEngine != null && gameEngine.isActive() && !gameEngine.isPlaying())
         {
@@ -279,7 +298,7 @@ public abstract class AbstractGameActivity extends Activity
 
     @Override
     protected void onStop()
-    {
+    {/*
         // save screenshot of the screen to paint when we resume.
         if (gameScreen != null && gameEngine != null && gameEngine.isActive())
         {
@@ -288,7 +307,7 @@ public abstract class AbstractGameActivity extends Activity
                 screenshot.recycle();
             }
             screenshot = gameScreen.getScreenshot();
-        }
+        }*/
         super.onStop();
     }
 
@@ -300,15 +319,15 @@ public abstract class AbstractGameActivity extends Activity
      */
     @Override
     protected void onDestroy()
-    {
+    {/*
         if (screenshot != null)
         {
             screenshot.recycle();
             screenshot = null;
-        }
+        }*/
         if (gameEngine != null)
         {
-            gameScreen.unregisterReadyForPaintingListener();
+            gameScreen.clearReadyForPaintingListener();
             if (gameEngine.isActive())
             {
                 gameEngine.stopGame();
@@ -333,7 +352,10 @@ public abstract class AbstractGameActivity extends Activity
 
     private void resumeGame()
     {
-        hidePauseMenu();
+        if (pauseMenuEnabled)
+        {
+            hidePauseMenu();
+        }
         gameEngine.resumeGame();
     }
 
@@ -342,7 +364,10 @@ public abstract class AbstractGameActivity extends Activity
         gameScreen = null;
 
         // If we came from the pause menu, hide it.
-        hidePauseMenu();
+        if (pauseMenuEnabled)
+        {
+            hidePauseMenu();
+        }
 
         if (gameEngine != null)
         {
@@ -405,9 +430,10 @@ public abstract class AbstractGameActivity extends Activity
     @IdRes
     protected abstract int provideBestTextViewIdResId();
 
-    @ColorRes
-    protected abstract int provideGameSplashColorId();
+    //TODO: make a better way of setting preferences/settings.
+    protected abstract boolean pauseMenuEnabled();
 
+    //TODO: remove the tugs, these should be used and renamed to be full words.
     // Default tugs for when layouts are not supplied.
     /**
      * User should not call this method.
