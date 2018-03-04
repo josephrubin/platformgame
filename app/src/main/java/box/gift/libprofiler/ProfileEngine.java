@@ -1,6 +1,7 @@
 package box.gift.libprofiler;
 
 import android.view.Choreographer;
+import android.view.MotionEvent;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -9,6 +10,7 @@ import box.shoe.gameutils.engine.AbstractEngine;
 import box.shoe.gameutils.GameEvents;
 import box.shoe.gameutils.engine.GameState;
 import box.shoe.gameutils.Rand;
+import box.shoe.gameutils.map.MapLoader;
 import box.shoe.gameutils.screen.Screen;
 import box.shoe.gameutils.Vector;
 import box.shoe.gameutils.Weaver;
@@ -21,24 +23,37 @@ public class ProfileEngine extends AbstractEngine
 {
     public static final int TARGET_UPS = 25;
 
-    public static final Vector SCROLL_SPEED = new Vector(-38, 0);
+    public static final Vector NORMAL_SCROLL_SPEED = new Vector(-38, 0);
+    public static final Vector FAST_SCROLL_SPEED = new Vector(-250, 0);
 
     public static final String PLAYER = "player";
     public static final String PLATFORMS = "platforms";
     public static final String SCORE = "score";
+    public static final String TRY_AGAIN_BUTTON = "try_again_button";
+    public static final String PLAY_BUTTON = "play_button";
 
     private Player player;
     private LinkedList<Platform> platforms;
+    private Platform initialPlatform;
     private float lastPlatformY;
+
+    private TryAgainButton tryAgainButton;
+    private PlayButton playButton;
+    private boolean firstTry = true;
 
     private final int platformDistance = 450;
 
     private Rand random;
 
-    private int score = 0;
+    private int score;
 
-    private int difficulty = 0;
+    private int difficulty;
     private final int SECONDS_UNTIL_MAX_DIFFICULTY = 35;
+
+    private boolean tryAgain = false;
+    private boolean tryAgainButtonTouched = false;
+
+    private boolean playerDied = true;
 
     public ProfileEngine(Screen screen)
     {
@@ -50,55 +65,70 @@ public class ProfileEngine extends AbstractEngine
     @Override
     protected void initialize()
     {
-        float playerHeight = getGameWidth() / 10;
-        player = new Player(getGameWidth() / 15, 4 * getGameHeight() / 9 - playerHeight, playerHeight, playerHeight * (21F/33F));
+        createPlayer();
+        spawnInitialPlatform();
 
-        // Spawn initial platform.
-        platforms.add(new Platform(0, 4 * getGameHeight() / 9, getGameWidth() * 2, getGameHeight() / 34));
-        lastPlatformY = getGameHeight() / 2;
+        score = 0;
+        difficulty = 0;
     }
+
+    private void createPlayer()
+    {
+        float playerHeight = getGameWidth() / 10;
+        player = new Player(getGameWidth() / 15, 0 - playerHeight, playerHeight, playerHeight * (21F/33F));
+    }
+
 
     @Override
     protected void update()
     {
-        difficulty += 1;
-        difficulty = Math.min(difficulty, TARGET_UPS * SECONDS_UNTIL_MAX_DIFFICULTY);
-
-        if (screenTouched)
+        if (!tryAgain)
         {
-            player.requestJump();
-        }
+            difficulty += 1;
+            difficulty = Math.min(difficulty, TARGET_UPS * SECONDS_UNTIL_MAX_DIFFICULTY);
 
-        //TODO: player dying should be part of its own update method, but we must first figure out how it knows when it's offscreen.
-        if (player.body.top > getGameHeight())
-        {
-            Weaver.tug(GameEvents.GAME_OVER);
-        }
-
-        float playerOldBottom = player.body.bottom;
-        player.update();
-        player.offGround();
-
-        boolean spawnPlatform = false;
-        Iterator<Platform> platformIterator = platforms.iterator();
-        while (platformIterator.hasNext())
-        {
-            Platform platform = platformIterator.next();
-
-            if (playerOldBottom <= platform.body.top && player.body.bottom > platform.body.top
-                    && player.body.right > platform.body.left && player.body.left < platform.body.right)
+            if (screenTouched)
             {
-                player.body.offsetTo(player.body.left, platform.body.top - player.body.height());
-                player.velocity = Vector.ZERO;
-            }/*
-            else if (EntityCollisions.entityEntity(player, platform))
+                player.requestJump();
+            }
+
+            //TODO: player dying should be part of its own update method, but we must first figure out how it knows when it's offscreen.
+            if (player.body.top > getGameHeight())
             {
-                Weaver.tug(GameEvents.GAME_OVER);
-            }*/
-            if (player.body.bottom == platform.body.top
-                    && player.body.right + 50 > platform.body.left && player.body.left < platform.body.right + 50 /*add a bit of tolerance if we have just left the platform*/
-                    && player.velocity.getY() >= 0)
-            {/*
+                if (!playerDied)
+                {
+                    spawnInitialPlatform();
+                    for (Platform platform : platforms)
+                    {
+                        platform.velocity = FAST_SCROLL_SPEED;
+                    }
+                    playerDied = true;
+                }
+            }
+
+            float playerOldBottom = player.body.bottom;
+            if (!playerDied)
+            {
+                player.update();
+            }
+            player.offGround();
+
+            boolean spawnPlatform = false;
+            Iterator<Platform> platformIterator = platforms.iterator();
+            while (platformIterator.hasNext())
+            {
+                Platform platform = platformIterator.next();
+
+                if (playerOldBottom <= platform.body.top && player.body.bottom > platform.body.top
+                        && player.body.right > platform.body.left && player.body.left < platform.body.right)
+                {
+                    player.body.offsetTo(player.body.left, platform.body.top - player.body.height());
+                    player.velocity = Vector.ZERO;
+                }
+                if (player.body.bottom == platform.body.top
+                        && player.body.right + 50 > platform.body.left && player.body.left < platform.body.right + 50 /*add a bit of tolerance if we have just left the platform*/
+                        && player.velocity.getY() >= 0)
+                {/*
                 if (!grounded)
                 {
                     for (int i = 0; i < 12; i++)
@@ -106,53 +136,78 @@ public class ProfileEngine extends AbstractEngine
                         landEmitter.emit(player.x + player.width / 2, player.y + player.height);
                     }
                 }*/
-                player.onGround();
-            }
+                    player.onGround();
+                }
 
-            // Destroy offscreen platforms.
-            if (platform.body.right < 0)
-            {
-                platform.cleanup();
-                platformIterator.remove();
-            }
-
-            platform.update();
-
-            // Check if this is the last platform.
-            if (!platformIterator.hasNext())
-            {
-                if (platform.body.right + platformDistance <= getGameWidth())
+                // Destroy offscreen platforms.
+                if (platform.body.right < 0)
                 {
-                    spawnPlatform = true;
+                    platform.cleanup();
+                    platformIterator.remove();
+                }
+
+                platform.update();
+
+                // Check if this is the last platform.
+                if (!platformIterator.hasNext())
+                {
+                    if (platform.body.right + platformDistance <= getGameWidth())
+                    {
+                        spawnPlatform = true;
+                    }
                 }
             }
-        }
-        if (spawnPlatform)
-        {
-            spawnPlatform();
-        }
-/*
-        if (attack != null)
-        {
-            attack.cleanup();
-            attack = null;
-        }
-        if (screenTouched)
-        {
-            if (jumpTouch)
+            if (spawnPlatform && !playerDied)
             {
-                player.requestJump();
+                spawnPlatform();
+            }
+
+            if (!playerDied)
+            {
+                score += 1;
+            }
+        }
+
+        if (initialPlatform != null && initialPlatform.body.left <= 0)
+        {
+            float size = getGameWidth() / 3;
+            if (firstTry)
+            {
+                playButton = new PlayButton(getGameWidth() / 2 - size / 2, getGameHeight() / 2 - size / 2, size, size);
+                firstTry = false;
             }
             else
             {
-                attack = player.requestAttack();
+                tryAgainButton = new TryAgainButton(getGameWidth() / 2 - size / 2, getGameHeight() / 2 - size / 2, size, size);
             }
-            jumpTouch = false;
-        }
-*/
-        //landEmitter.update();
+            initialPlatform = null;
 
-        score += 1;
+            tryAgain = true;
+        }
+
+        if (tryAgainButtonTouched)
+        {
+            playerDied = false;
+            createPlayer();
+            score = 0;
+            difficulty = 0;
+            tryAgainButton = null;
+            playButton = null;
+            tryAgain = false;
+            for (Platform platform : platforms)
+            {
+                platform.velocity = NORMAL_SCROLL_SPEED;
+            }
+        }
+
+        tryAgainButtonTouched = false;
+    }
+
+    private void spawnInitialPlatform()
+    {
+        initialPlatform = new Platform(getGameWidth() * 1.4F, 4 * getGameHeight() / 9, getGameWidth() * 2, getGameHeight() / 34, FAST_SCROLL_SPEED);
+        platforms.add(initialPlatform);
+        lastPlatformY = getGameHeight() / 2;
     }
 
     private void spawnPlatform()
@@ -189,10 +244,9 @@ public class ProfileEngine extends AbstractEngine
         int w = (int) (((double) initialWidth * (1 - difficultyFactor)) + randomFactor);
 
         // Create the platform
-        platforms.add(new Platform(x, y, w, h));
+        platforms.add(new Platform(x, y, w, h, NORMAL_SCROLL_SPEED));
 
         lastPlatformY = y;
-        
         // Maybe generate a second platform.
         if (!secondPlatform)
         {
@@ -213,8 +267,10 @@ public class ProfileEngine extends AbstractEngine
         gameState.put(PLAYER, player);
         gameState.put(PLATFORMS, platforms);
         gameState.put(SCORE, score / 2);
+        gameState.put(TRY_AGAIN_BUTTON, tryAgainButton);
+        gameState.put(PLAY_BUTTON, playButton);
     }
-/*
+
     @Override
     protected void onTouchEvent(MotionEvent event)
     {
@@ -222,13 +278,24 @@ public class ProfileEngine extends AbstractEngine
 
         if (screenTouched)
         {
-            if (event.getX() <= getGameWidth() / 2)
+            if (tryAgainButton != null)
             {
-                jumpTouch = true;
+                if (tryAgainButton.body.contains(event.getX(), event.getY()))
+                {
+                    tryAgainButtonTouched = true;
+                }
+            }
+            else if (playButton != null)
+            {
+                if (playButton.body.contains(event.getX(), event.getY()))
+                {
+                    tryAgainButtonTouched = true;
+                }
             }
         }
     }
-*/
+
+    //TODO: make this score set the best, even if we didn't make the game stop.
     @Override
     public int getResult()
     {

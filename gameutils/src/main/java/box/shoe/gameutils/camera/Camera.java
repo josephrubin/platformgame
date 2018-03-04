@@ -15,7 +15,7 @@ public interface Camera
      * so that draws occur through the lens of the camera.
      * @param canvas the canvas to view through the camera.
      */
-    void roll(Canvas canvas);
+    void roll(Canvas canvas); //attach?
 
     /**
      * Returns true iff the supplied DisplayEntity's display bounds indicate that it

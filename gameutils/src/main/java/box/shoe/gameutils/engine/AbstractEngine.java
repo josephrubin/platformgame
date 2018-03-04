@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import box.gift.gameutils.R;
+import box.shoe.gameutils.RasterFont;
 import box.shoe.gameutils.debug.Benchmarker;
 import box.shoe.gameutils.debug.L;
 import box.shoe.gameutils.screen.Screen;
@@ -99,6 +100,10 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
     // Etc. //TODO: sort these
     protected volatile boolean screenTouched = false;
 
+    private double displayRefreshRate;
+    private final int ALLOTED_TIME_PER_FRAME;
+
+
     // Fixed display mode - display will attempt to paint
     // pairs of updates for a fixed amount of time (expectedUpdateDelayNS)
     // regardless of the amount of time that passed between
@@ -125,8 +130,6 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
     // This is not a huge deal, but if we can correct for it, why not?
     // Default it to 0 if our API level is not high enough to get the real value.
     private long vsyncOffsetNanos = 0;
-
-    private double displayRefreshRate;
 
     public AbstractEngine(@UPS_Options int targetUPS, Screen screen) //target ups should divide evenly into 1000000000, updates are accurately called to within about 10ms
     {
@@ -195,6 +198,8 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
         //TODO: fallback if this cannot be done? (when the display returns null).
         Display display = ((WindowManager) gameScreen.asView().getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
         displayRefreshRate = display.getRefreshRate();
+        ALLOTED_TIME_PER_FRAME = (int) Math.ceil(1000 / displayRefreshRate);
+        //L.d("timer per, expected 17 on this device: " + ALLOTED_TIME_PER_FRAME, "optimization");
         //L.d("Display Refresh Rate: " + displayRefreshRate, "optimization");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -559,11 +564,12 @@ public abstract class AbstractEngine //TODO: redo input system. make it easy, us
                     gameScreen.preparePaint();
                 }
 
+                //TODO: we should only skip frames if it takes too long to draw, not if the updates are taking too long. so this needs to make sure to only count the draw frame time, which is not working.
                 // If we took more time than we are allowed, it may be that we are stuck
                 // in a "death spiral", where we are constantly unable to catch up due to
                 // the constant demand to generate the next frame. So we ease up a little bit
                 // by skipping the next frame, so that we do not get screen jank.
-                if (SystemClock.currentThreadTimeMillis() - beginFrameThreadTimeMS > 17) //TODO: not all phones are 60fps csync, replace with dynamically fetched value
+                if (SystemClock.currentThreadTimeMillis() - beginFrameThreadTimeMS > ALLOTED_TIME_PER_FRAME)
                 {
                     skipNextFrame = true;
                     Log.i(AbstractEngine.this.getClass().getSimpleName(),

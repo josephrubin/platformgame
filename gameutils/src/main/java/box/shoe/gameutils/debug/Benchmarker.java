@@ -16,7 +16,7 @@ public class Benchmarker
     {
         currentThreadTimeMS = SystemClock.currentThreadTimeMillis();
         currentOverallTimeMS = SystemClock.uptimeMillis();
-    }
+}
 
     public static void resultThread()
     {

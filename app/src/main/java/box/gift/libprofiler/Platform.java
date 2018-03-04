@@ -8,6 +8,7 @@ import android.graphics.RectF;
 
 import box.shoe.gameutils.DisplayEntity;
 import box.shoe.gameutils.Rand;
+import box.shoe.gameutils.Vector;
 import box.shoe.gameutils.engine.Interpolatable;
 
 /**
@@ -21,9 +22,9 @@ public class Platform extends DisplayEntity
     private RectF temporaryDrawBounds;
     private int bottomColor;
 
-    public Platform(float initialX, float initialY, float initialWidth, float initialHeight)
+    public Platform(float initialX, float initialY, float initialWidth, float initialHeight, Vector velocity)
     {
-        super(initialX, initialY, initialWidth, initialHeight, ProfileEngine.SCROLL_SPEED);
+        super(initialX, initialY, initialWidth, initialHeight, velocity);
         temporaryDrawBounds = new RectF();
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
@@ -49,7 +50,7 @@ public class Platform extends DisplayEntity
     {
         // Shortening our draw rectangle would reduce overdraw but we
         // need to cover up the rounded bottom, so we must overdraw.
-        paint.setColor(Color.parseColor("#04f204"));
+        paint.setColor(Color.parseColor("#04ee04"));
         float rad = display.height() / 3;
         canvas.drawRoundRect(display, rad, rad, paint);
 

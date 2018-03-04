@@ -2,7 +2,7 @@ package box.shoe.gameutils;
 
 import java.util.Random;
 
-public class Rand extends Random
+public class Rand extends Random //TODO: should not be instantiated. simply supply static utility methods for using Math.random.
 {
     /*pack*/ static final Rand instance = new Rand();
 

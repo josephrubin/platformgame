@@ -3,6 +3,8 @@ package box.shoe.gameutils;
 import android.support.annotation.CallSuper;
 import android.util.Log;
 
+import box.gift.gameutils.BuildConfig;
+
 /**
  * Created by Joseph on 12/9/2017.
  * A game object which occupies position and space in the game and can move around.
@@ -135,7 +137,7 @@ public class Entity/* implements Poolable*/
     {
         try
         {
-            if (!cleaned) //TODO: only in debug mode
+            if (!cleaned && BuildConfig.DEBUG) //TODO: only in debug mode
             {
                 // We log a warning because throwing an error here will not stop program execution
                 // anyway and there is technically no 'error' here. For all we know, the Entities do not

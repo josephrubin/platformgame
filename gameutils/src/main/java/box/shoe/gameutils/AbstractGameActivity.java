@@ -17,7 +17,7 @@ import box.shoe.gameutils.engine.AbstractEngine;
 import box.shoe.gameutils.screen.Screen;
 
 //TODO: there should be an interface updateable to make a thing update for entities, taskschedulers. particleeffetc etccc...
-//TODO: place in gameutils module, so that it can be simply extended in the app module. (similarly, the layout files, somehow make customizable still)
+//TODO: on pauseMenuEnabled=false mode, screen flashes black when switching between menu and game.
 public abstract class AbstractGameActivity extends Activity
 {
     private SharedPreferences sharedPreferences;
